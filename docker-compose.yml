@@ -1,0 +1,119 @@
+version: '3.8'
+
+# ======================================================
+# 限位挡块资产登记系统 - Docker Compose 配置
+# 所有端口、镜像仓库均从 .env 读取，不在此文件写死
+# 所有对外端口统一绑定 127.0.0.1，禁止使用 0.0.0.0
+# 容器名称统一使用 ${PROJECT_NAME}-xxx 规则
+# ======================================================
+
+services:
+  # ---------- MySQL 数据库 ----------
+  mysql:
+    image: ${DOCKER_REGISTRY}/library/mysql:8.0
+    container_name: ${PROJECT_NAME}-mysql
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MYSQL_PORT}:${MYSQL_INTERNAL_PORT}"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      TZ: ${TZ}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./backend/src/main/resources/db/schema.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - stopper-net
+
+  # ---------- Redis 缓存 ----------
+  redis:
+    image: ${DOCKER_REGISTRY}/library/redis:7-alpine
+    container_name: ${PROJECT_NAME}-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${REDIS_PORT}:${REDIS_INTERNAL_PORT}"
+    environment:
+      TZ: ${TZ}
+    volumes:
+      - redis-data:/data
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory ${REDIS_MAXMEMORY}
+      --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - stopper-net
+
+  # ---------- 后端 SpringBoot ----------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY}
+    container_name: ${PROJECT_NAME}-backend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${BACKEND_PORT}:${BACKEND_INTERNAL_PORT}"
+    environment:
+      TZ: ${TZ}
+      SERVER_PORT: ${BACKEND_INTERNAL_PORT}
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:${MYSQL_INTERNAL_PORT}/${MYSQL_DATABASE}?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: ${REDIS_INTERNAL_PORT}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/logs:/app/logs
+    networks:
+      - stopper-net
+
+  # ---------- 前端 Nginx ----------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY}
+    container_name: ${PROJECT_NAME}-frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT}:${FRONTEND_INTERNAL_PORT}"
+    environment:
+      TZ: ${TZ}
+    depends_on:
+      - backend
+    networks:
+      - stopper-net
+
+# ---------- 自定义网络（隔离项目） ----------
+networks:
+  stopper-net:
+    driver: bridge
+    name: ${PROJECT_NAME}-net
+
+# ---------- 持久化数据卷 ----------
+volumes:
+  mysql-data:
+    name: ${PROJECT_NAME}-mysql-data
+  redis-data:
+    name: ${PROJECT_NAME}-redis-data

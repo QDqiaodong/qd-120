@@ -1,0 +1,52 @@
+# ============================================
+# 后端项目 Docker 构建忽略文件
+# 排除所有不必要文件，减小构建上下文
+# ============================================
+
+# Maven 构建产物
+target
+*.jar
+*.war
+*.ear
+
+# Maven 本地仓库（容器内会自行处理）
+.m2
+
+# IDE 配置
+.vscode
+.idea
+*.iml
+.settings
+.classpath
+.project
+.factorypath
+
+# 日志
+logs
+*.log
+
+# 系统文件
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# 临时文件
+*.tmp
+*.temp
+*.class
+
+# 环境变量
+.env
+.env.local
+
+# Git
+.git
+.gitignore
+
+# 测试
+test
+target/test-classes
+
+# 文档
+*.md
+!README.md
