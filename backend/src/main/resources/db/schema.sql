@@ -2,8 +2,7 @@ CREATE DATABASE IF NOT EXISTS stopper_asset DEFAULT CHARACTER SET utf8mb4 COLLAT
 
 USE stopper_asset;
 
-DROP TABLE IF EXISTS stopper;
-CREATE TABLE stopper (
+CREATE TABLE IF NOT EXISTS stopper (
     id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     stopper_no VARCHAR(50) NOT NULL COMMENT '挡块编号',
     spec VARCHAR(100) DEFAULT NULL COMMENT '规格型号',
@@ -24,8 +23,7 @@ CREATE TABLE stopper (
     KEY idx_adapt_equipment (adapt_equipment)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='限位挡块基础档案表';
 
-DROP TABLE IF EXISTS stopper_shift;
-CREATE TABLE stopper_shift (
+CREATE TABLE IF NOT EXISTS stopper_shift (
     id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     stopper_id BIGINT NOT NULL COMMENT '挡块ID',
     stopper_no VARCHAR(50) DEFAULT NULL COMMENT '挡块编号',
@@ -44,8 +42,7 @@ CREATE TABLE stopper_shift (
     KEY idx_to_station (to_station)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='挡块工位移位记录表';
 
-DROP TABLE IF EXISTS stopper_inventory;
-CREATE TABLE stopper_inventory (
+CREATE TABLE IF NOT EXISTS stopper_inventory (
     id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     inventory_no VARCHAR(50) NOT NULL COMMENT '盘点单号',
     inventory_month VARCHAR(20) DEFAULT NULL COMMENT '盘点月份',
@@ -64,8 +61,7 @@ CREATE TABLE stopper_inventory (
     KEY idx_inventory_status (inventory_status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='挡块月度资产清点表';
 
-DROP TABLE IF EXISTS stopper_inventory_detail;
-CREATE TABLE stopper_inventory_detail (
+CREATE TABLE IF NOT EXISTS stopper_inventory_detail (
     id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     inventory_id BIGINT NOT NULL COMMENT '盘点单ID',
     stopper_id BIGINT NOT NULL COMMENT '挡块ID',
@@ -82,8 +78,7 @@ CREATE TABLE stopper_inventory_detail (
     KEY idx_station (station)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='挡块盘点明细表';
 
-DROP TABLE IF EXISTS stopper_scrap;
-CREATE TABLE stopper_scrap (
+CREATE TABLE IF NOT EXISTS stopper_scrap (
     id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     stopper_id BIGINT NOT NULL COMMENT '挡块ID',
     stopper_no VARCHAR(50) DEFAULT NULL COMMENT '挡块编号',
@@ -100,7 +95,7 @@ CREATE TABLE stopper_scrap (
     KEY idx_scrap_time (scrap_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='挡块报废归档表';
 
-INSERT INTO stopper (stopper_no, spec, adapt_equipment, station, storage_time, image_url, status, remark, create_time, update_time, deleted) VALUES
+INSERT IGNORE INTO stopper (stopper_no, spec, adapt_equipment, station, storage_time, image_url, status, remark, create_time, update_time, deleted) VALUES
 ('STP-001', 'D型-25x30', '全自动组装机A-01', 'A区-工位01', '2024-01-15 09:00:00', '', 1, '标准挡块', '2024-01-15 09:00:00', '2024-01-15 09:00:00', 0),
 ('STP-002', 'D型-25x30', '全自动组装机A-02', 'A区-工位01', '2024-01-15 09:05:00', '', 1, '标准挡块', '2024-01-15 09:05:00', '2024-01-15 09:05:00', 0),
 ('STP-003', 'D型-30x40', '全自动组装机A-01', 'A区-工位02', '2024-01-20 14:00:00', '', 1, '大号挡块', '2024-01-20 14:00:00', '2024-01-20 14:00:00', 0),

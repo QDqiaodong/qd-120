@@ -5,7 +5,7 @@
 # ========================================================
 
 # 接收全局镜像仓库地址，由 docker-compose build args 传入
-ARG DOCKER_REGISTRY
+ARG DOCKER_REGISTRY=docker.io
 
 # ---------- 阶段一：构建 ----------
 # 使用全局统一仓库地址，杜绝直连 DockerHub
@@ -14,8 +14,7 @@ FROM ${DOCKER_REGISTRY}/library/node:18-alpine AS builder
 WORKDIR /app
 
 # 配置 npm 使用国内镜像源（腾讯云镜像），无需 VPN
-RUN npm config set registry https://mirrors.cloud.tencent.com/npm/ \
-    && npm config set disturl https://mirrors.cloud.tencent.com/nodejs-release/
+RUN npm config set registry https://registry.npmmirror.com/
 
 # 【依赖层】仅复制包管理文件，利用 Docker 缓存
 # 只要 package.json / package-lock.json 不变，此层完全复用

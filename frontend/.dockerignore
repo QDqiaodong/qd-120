@@ -9,6 +9,8 @@ node_modules
 # 构建产物
 dist
 build
+dist-ssr
+.output
 
 # 日志
 npm-debug.log*
@@ -34,6 +36,9 @@ ehthumbs.db
 *.tmp
 *.temp
 .cache
+.vite
+tmp
+temp
 
 # 环境变量
 .env
@@ -44,5 +49,9 @@ ehthumbs.db
 screenshots
 test
 coverage
+*.png
+*.jpg
+*.jpeg
+*.gif
 *.md
 !README.md
