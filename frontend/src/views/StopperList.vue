@@ -54,11 +54,29 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="图片" width="80">
+        <el-table-column label="图片" width="80" align="center">
           <template #default="{ row }">
-            <div v-if="row.imageUrl" class="table-image" @click="previewImage(row.imageUrl)">
-              <img :src="row.imageUrl" alt="" class="stopper-thumb" />
-            </div>
+            <el-image
+              v-if="row.imageUrl"
+              class="stopper-thumb"
+              :src="row.imageUrl"
+              :preview-src-list="[row.imageUrl]"
+              :preview-teleported="true"
+              :hide-on-click-modal="true"
+              fit="contain"
+            >
+              <template #placeholder>
+                <div class="image-slot">
+                  <el-icon class="is-loading"><Loading /></el-icon>
+                </div>
+              </template>
+              <template #error>
+                <div class="image-slot">
+                  <el-icon><Picture /></el-icon>
+                  <span>加载失败</span>
+                </div>
+              </template>
+            </el-image>
             <span v-else class="no-image">-</span>
           </template>
         </el-table-column>
@@ -109,10 +127,6 @@
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" @click="handleSubmit">确定</el-button>
       </template>
-    </el-dialog>
-
-    <el-dialog v-model="imagePreviewVisible" title="图片预览" width="600px" class="image-preview-modal">
-      <img :src="previewImageUrl" alt="预览图片" style="width: 100%" />
     </el-dialog>
 
     <el-dialog v-model="shiftDialogVisible" title="挡块移位登记" width="500px">
@@ -180,9 +194,6 @@ const formRules = {
   spec: [{ required: true, message: '请输入规格型号', trigger: 'blur' }],
   station: [{ required: true, message: '请输入存放工位', trigger: 'blur' }]
 }
-
-const imagePreviewVisible = ref(false)
-const previewImageUrl = ref('')
 
 const shiftDialogVisible = ref(false)
 const shiftForm = reactive({
@@ -341,11 +352,6 @@ const handleShiftSubmit = async () => {
   }
 }
 
-const previewImage = (url) => {
-  previewImageUrl.value = url
-  imagePreviewVisible.value = true
-}
-
 const handleSizeChange = (val) => {
   pageSize.value = val
   loadData()
@@ -383,17 +389,36 @@ onMounted(() => {
   justify-content: flex-end;
 }
 
-.table-image {
-  cursor: pointer;
+.stopper-thumb {
   width: 50px;
   height: 50px;
+  border-radius: 4px;
+  background: #f5f7fa;
+  cursor: pointer;
 }
 
-.stopper-thumb {
+.stopper-thumb :deep(.el-image__inner) {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+.image-slot {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: #909399;
+  font-size: 11px;
+  background: #f5f7fa;
   border-radius: 4px;
+}
+
+.image-slot .el-icon {
+  font-size: 16px;
 }
 
 .no-image {
