@@ -110,6 +110,13 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
         if (inventory == null) {
             throw new RuntimeException("盘点记录不存在");
         }
+        List<StopperInventoryDetail> details = detailService.getByInventoryId(inventoryId);
+        long pendingCount = details.stream()
+                .filter(detail -> detail.getInventoryStatus() == 0)
+                .count();
+        if (pendingCount > 0) {
+            throw new RuntimeException("还有 " + pendingCount + " 项挡块未盘点，请全部处理后再完成盘点");
+        }
         updateInventorySummary(inventoryId);
         inventory.setInventoryStatus("COMPLETED");
         inventory.setRemark(remark);

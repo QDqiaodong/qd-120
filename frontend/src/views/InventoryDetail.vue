@@ -98,7 +98,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getInventoryById, getInventoryDetail, markInventoryItem, completeInventory } from '@/api/inventory'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -127,12 +127,10 @@ const loadData = async () => {
 
   loading.value = true
   try {
-    const [info, details] = await Promise.all([
-      getInventoryById(id),
-      getInventoryDetail(id)
-    ])
-    inventoryInfo.value = info
+    const details = await getInventoryDetail(id)
     detailList.value = details
+    const info = await getInventoryById(id)
+    inventoryInfo.value = info
   } catch (error) {
     ElMessage.error('加载数据失败')
   } finally {
@@ -186,24 +184,38 @@ const submitDiff = async () => {
   }
 }
 
-const handleComplete = () => {
-  ElMessageBox.prompt('请输入盘点备注', '完成盘点', {
-    confirmButtonText: '确认完成',
-    cancelButtonText: '取消',
-    inputPlaceholder: '请输入盘点备注（可选）',
-    inputType: 'textarea'
-  }).then(async ({ value }) => {
-    try {
-      await completeInventory({
-        inventoryId: route.params.id,
-        remark: value || ''
-      })
-      ElMessage.success('盘点完成')
-      loadData()
-    } catch (error) {
-      ElMessage.error('操作失败')
+const handleComplete = async () => {
+  if (pendingCount.value > 0) {
+    ElMessageBox.confirm(
+      `还有 ${pendingCount.value} 项挡块未盘点，请先全部处理后再完成盘点。`,
+      '存在未盘明细',
+      {
+        confirmButtonText: '我知道了',
+        showCancelButton: false,
+        type: 'warning'
+      }
+    )
+    return
+  }
+  try {
+    const { value } = await ElMessageBox.prompt('请输入盘点备注', '完成盘点', {
+      confirmButtonText: '确认完成',
+      cancelButtonText: '取消',
+      inputPlaceholder: '请输入盘点备注（可选）',
+      inputType: 'textarea'
+    })
+    await completeInventory({
+      inventoryId: route.params.id,
+      remark: value || ''
+    })
+    ElMessage.success('盘点完成')
+    await loadData()
+    await nextTick()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error(error?.message || '操作失败')
     }
-  }).catch(() => {})
+  }
 }
 
 onMounted(() => {

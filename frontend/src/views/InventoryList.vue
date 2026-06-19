@@ -67,7 +67,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { getInventoryList, startInventory } from '@/api/inventory'
 import { ElMessage } from 'element-plus'
@@ -141,6 +141,10 @@ const viewDetail = (row) => {
 }
 
 onMounted(() => {
+  loadData()
+})
+
+onActivated(() => {
   loadData()
 })
 </script>
