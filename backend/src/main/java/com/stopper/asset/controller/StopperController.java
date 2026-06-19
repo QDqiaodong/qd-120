@@ -84,12 +84,18 @@ public class StopperController {
 
     @PostMapping
     public Result<String> add(@RequestBody Stopper stopper) {
+        if (stopperService.existsByStopperNo(stopper.getStopperNo(), null)) {
+            return Result.validationError("stopperNo", "挡块编号已存在");
+        }
         boolean result = stopperService.addStopper(stopper);
         return result ? Result.success("添加成功") : Result.error("添加失败");
     }
 
     @PutMapping
     public Result<String> update(@RequestBody Stopper stopper) {
+        if (stopperService.existsByStopperNo(stopper.getStopperNo(), stopper.getId())) {
+            return Result.validationError("stopperNo", "挡块编号已存在");
+        }
         boolean result = stopperService.updateStopper(stopper);
         return result ? Result.success("更新成功") : Result.error("更新失败");
     }

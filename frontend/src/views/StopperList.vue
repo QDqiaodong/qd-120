@@ -332,7 +332,18 @@ const handleSubmit = async () => {
         dialogVisible.value = false
         loadData()
       } catch (error) {
-        ElMessage.error(isEdit.value ? '更新失败' : '添加失败')
+        if (error.fieldErrors) {
+          const fields = {}
+          Object.keys(error.fieldErrors).forEach(field => {
+            fields[field] = {
+              message: error.fieldErrors[field],
+              field: field
+            }
+          })
+          formRef.value.setFields(fields)
+        } else {
+          ElMessage.error(isEdit.value ? '更新失败' : '添加失败')
+        }
       }
     }
   })

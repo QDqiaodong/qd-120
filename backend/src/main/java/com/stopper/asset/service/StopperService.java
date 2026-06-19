@@ -65,7 +65,20 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
                 .eq(Stopper::getDeleted, 0));
     }
 
+    public boolean existsByStopperNo(String stopperNo, Long excludeId) {
+        LambdaQueryWrapper<Stopper> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Stopper::getStopperNo, stopperNo)
+                .eq(Stopper::getDeleted, 0);
+        if (excludeId != null) {
+            wrapper.ne(Stopper::getId, excludeId);
+        }
+        return count(wrapper) > 0;
+    }
+
     public boolean addStopper(Stopper stopper) {
+        if (existsByStopperNo(stopper.getStopperNo(), null)) {
+            return false;
+        }
         stopper.setStatus(1);
         stopper.setStorageTime(LocalDateTime.now());
         stopper.setCreateTime(LocalDateTime.now());
@@ -79,6 +92,9 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
     }
 
     public boolean updateStopper(Stopper stopper) {
+        if (existsByStopperNo(stopper.getStopperNo(), stopper.getId())) {
+            return false;
+        }
         stopper.setUpdateTime(LocalDateTime.now());
         boolean result = updateById(stopper);
         if (result) {
