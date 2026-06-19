@@ -11,6 +11,8 @@ import java.util.List;
 @Mapper
 public interface StopperInventoryDetailMapper extends BaseMapper<StopperInventoryDetail> {
 
-    @Select("SELECT * FROM stopper_inventory_detail WHERE inventory_id = #{inventoryId} AND deleted = 0")
+    @Select("SELECT d.* FROM stopper_inventory_detail d " +
+            "INNER JOIN stopper s ON d.stopper_id = s.id " +
+            "WHERE d.inventory_id = #{inventoryId} AND d.deleted = 0 AND s.deleted = 0")
     List<StopperInventoryDetail> selectByInventoryId(@Param("inventoryId") Long inventoryId);
 }

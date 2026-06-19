@@ -34,9 +34,9 @@ public class StopperController {
         LambdaQueryWrapper<Stopper> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Stopper::getDeleted, 0);
         if (keyword != null && !keyword.isEmpty()) {
-            wrapper.like(Stopper::getStopperNo, keyword)
+            wrapper.and(w -> w.like(Stopper::getStopperNo, keyword)
                     .or().like(Stopper::getSpec, keyword)
-                    .or().like(Stopper::getAdaptEquipment, keyword);
+                    .or().like(Stopper::getAdaptEquipment, keyword));
         }
         if (station != null && !station.isEmpty()) {
             wrapper.eq(Stopper::getStation, station);
@@ -56,7 +56,10 @@ public class StopperController {
 
     @GetMapping("/{id}")
     public Result<Stopper> getById(@PathVariable Long id) {
-        return Result.success(stopperService.getById(id));
+        LambdaQueryWrapper<Stopper> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Stopper::getId, id)
+                .eq(Stopper::getDeleted, 0);
+        return Result.success(stopperService.getOne(wrapper));
     }
 
     @GetMapping("/no/{stopperNo}")

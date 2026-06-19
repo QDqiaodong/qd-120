@@ -78,6 +78,13 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
             throw new RuntimeException("盘点明细不存在");
         }
 
+        Stopper stopper = stopperService.getOne(new LambdaQueryWrapper<Stopper>()
+                .eq(Stopper::getId, detail.getStopperId())
+                .eq(Stopper::getDeleted, 0));
+        if (stopper == null) {
+            throw new RuntimeException("对应挡块已删除，无法继续盘点操作");
+        }
+
         detail.setInventoryStatus(status);
         detail.setDiffReason(diffReason);
         detailService.updateById(detail);
@@ -99,6 +106,7 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
         }
 
         StopperInventory inventory = getById(inventoryId);
+        inventory.setTotalCount(details.size());
         inventory.setActualCount(actualCount);
         inventory.setDiffCount(diffCount);
         updateById(inventory);
@@ -118,6 +126,7 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
             throw new RuntimeException("还有 " + pendingCount + " 项挡块未盘点，请全部处理后再完成盘点");
         }
         updateInventorySummary(inventoryId);
+        inventory = getById(inventoryId);
         inventory.setInventoryStatus("COMPLETED");
         inventory.setRemark(remark);
         inventory.setInventoryTime(LocalDateTime.now());
