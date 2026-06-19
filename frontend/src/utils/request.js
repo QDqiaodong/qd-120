@@ -12,8 +12,16 @@ request.interceptors.response.use(
     if (res.code === 200) {
       return res.data
     } else {
-      ElMessage.error(res.message || '请求失败')
-      return Promise.reject(new Error(res.message || '请求失败'))
+      if (res.code === 400 && res.fieldErrors) {
+        const firstError = Object.values(res.fieldErrors)[0]
+        ElMessage.error(firstError || res.message || '参数校验失败')
+      } else {
+        ElMessage.error(res.message || '请求失败')
+      }
+      const error = new Error(res.message || '请求失败')
+      error.fieldErrors = res.fieldErrors || null
+      error.code = res.code
+      return Promise.reject(error)
     }
   },
   error => {

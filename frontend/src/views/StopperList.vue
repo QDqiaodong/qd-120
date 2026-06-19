@@ -84,7 +84,13 @@
           <template #default="{ row }">
             <el-button type="primary" size="small" link @click="handleView(row)">查看</el-button>
             <el-button type="primary" size="small" link @click="handleEdit(row)">编辑</el-button>
-            <el-button type="primary" size="small" link @click="handleShift(row)">移位</el-button>
+            <el-button
+              type="primary"
+              size="small"
+              link
+              :disabled="row.status === 2"
+              @click="handleShift(row)"
+            >移位</el-button>
             <el-button type="danger" size="small" link @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -129,8 +135,8 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="shiftDialogVisible" title="挡块移位登记" width="500px">
-      <el-form :model="shiftForm" label-width="100px">
+    <el-dialog v-model="shiftDialogVisible" title="挡块移位登记" width="500px" @close="resetShiftForm">
+      <el-form :model="shiftForm" :rules="shiftFormRules" ref="shiftFormRef" label-width="100px">
         <el-form-item label="挡块编号">
           <el-input :value="shiftForm.stopperNo" disabled />
         </el-form-item>
@@ -143,7 +149,7 @@
         <el-form-item label="操作人">
           <el-input v-model="shiftForm.operator" placeholder="请输入操作人" />
         </el-form-item>
-        <el-form-item label="移位原因">
+        <el-form-item label="移位原因" prop="shiftReason">
           <el-input v-model="shiftForm.shiftReason" type="textarea" :rows="2" placeholder="请输入移位原因" />
         </el-form-item>
       </el-form>
@@ -196,6 +202,7 @@ const formRules = {
 }
 
 const shiftDialogVisible = ref(false)
+const shiftFormRef = ref(null)
 const shiftForm = reactive({
   stopperId: null,
   stopperNo: '',
@@ -204,6 +211,26 @@ const shiftForm = reactive({
   operator: '',
   shiftReason: ''
 })
+
+const validateShiftToStation = (rule, value, callback) => {
+  if (value && shiftForm.fromStation && value.trim() === shiftForm.fromStation.trim()) {
+    callback(new Error('同工位不可重复登记'))
+  } else {
+    callback()
+  }
+}
+
+const shiftFormRules = {
+  toStation: [
+    { required: true, message: '请输入目标工位', trigger: 'blur' },
+    { validator: validateShiftToStation, trigger: 'blur' }
+  ],
+  shiftReason: [{
+    required: () => shiftForm.fromStation && shiftForm.fromStation.includes('维修'),
+    message: '维修区返回需填写原因',
+    trigger: 'blur'
+  }]
+}
 
 const formatDate = (date) => {
   if (!date) return '-'
@@ -337,19 +364,39 @@ const handleShift = (row) => {
   shiftDialogVisible.value = true
 }
 
+const resetShiftForm = () => {
+  shiftForm.stopperId = null
+  shiftForm.stopperNo = ''
+  shiftForm.fromStation = ''
+  shiftForm.toStation = ''
+  shiftForm.operator = ''
+  shiftForm.shiftReason = ''
+  shiftFormRef.value?.resetFields()
+}
+
 const handleShiftSubmit = async () => {
-  if (!shiftForm.toStation) {
-    ElMessage.warning('请输入目标工位')
-    return
-  }
-  try {
-    await addShift(shiftForm)
-    ElMessage.success('移位登记成功')
-    shiftDialogVisible.value = false
-    loadData()
-  } catch (error) {
-    ElMessage.error('登记失败')
-  }
+  if (!shiftFormRef.value) return
+  await shiftFormRef.value.validate(async (valid) => {
+    if (valid) {
+      try {
+        await addShift(shiftForm)
+        ElMessage.success('移位登记成功')
+        shiftDialogVisible.value = false
+        loadData()
+      } catch (error) {
+        if (error.fieldErrors) {
+          const fields = {}
+          Object.keys(error.fieldErrors).forEach(field => {
+            fields[field] = {
+              message: error.fieldErrors[field],
+              field: field
+            }
+          })
+          shiftFormRef.value.setFields(fields)
+        }
+      }
+    }
+  })
 }
 
 const handleSizeChange = (val) => {

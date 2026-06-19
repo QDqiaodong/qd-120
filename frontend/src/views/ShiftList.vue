@@ -90,9 +90,25 @@ const shiftForm = reactive({
 
 const currentStation = ref('')
 
+const validateToStation = (rule, value, callback) => {
+  if (value && currentStation.value && value.trim() === currentStation.value.trim()) {
+    callback(new Error('同工位不可重复登记'))
+  } else {
+    callback()
+  }
+}
+
 const formRules = {
   stopperId: [{ required: true, message: '请选择挡块', trigger: 'change' }],
-  toStation: [{ required: true, message: '请输入目标工位', trigger: 'blur' }]
+  toStation: [
+    { required: true, message: '请输入目标工位', trigger: 'blur' },
+    { validator: validateToStation, trigger: 'blur' }
+  ],
+  shiftReason: [{
+    required: () => currentStation.value && currentStation.value.includes('维修'),
+    message: '维修区返回需填写原因',
+    trigger: 'blur'
+  }]
 }
 
 const formatDate = (date) => {
@@ -121,6 +137,9 @@ const loadStoppers = async () => {
 }
 
 const handleStopperChange = async (stopperId) => {
+  if (formRef.value) {
+    formRef.value.clearValidate()
+  }
   if (stopperId) {
     try {
       const stopper = stopperList.value.find(s => s.id === stopperId)
@@ -163,7 +182,16 @@ const handleSubmit = async () => {
         loadData()
         loadStoppers()
       } catch (error) {
-        ElMessage.error('登记失败')
+        if (error.fieldErrors) {
+          const fields = {}
+          Object.keys(error.fieldErrors).forEach(field => {
+            fields[field] = {
+              message: error.fieldErrors[field],
+              field: field
+            }
+          })
+          formRef.value.setFields(fields)
+        }
       }
     }
   })
