@@ -26,6 +26,14 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
 
     @Transactional(rollbackFor = Exception.class)
     public StopperInventory startInventory(String inventoryMonth, String operator) {
+        Long existingProcessing = count(new LambdaQueryWrapper<StopperInventory>()
+                .eq(StopperInventory::getInventoryMonth, inventoryMonth)
+                .eq(StopperInventory::getInventoryStatus, "PROCESSING")
+                .eq(StopperInventory::getDeleted, 0));
+        if (existingProcessing > 0) {
+            throw new RuntimeException("该月份已有进行中的盘点单，请先完成或作废后再发起");
+        }
+
         String inventoryNo = "INV" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
 
         StopperInventory inventory = new StopperInventory();
@@ -85,7 +93,7 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
         for (StopperInventoryDetail detail : details) {
             if (detail.getInventoryStatus() == 1) {
                 actualCount++;
-            } else {
+            } else if (detail.getInventoryStatus() == 2) {
                 diffCount++;
             }
         }
@@ -102,6 +110,7 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
         if (inventory == null) {
             throw new RuntimeException("盘点记录不存在");
         }
+        updateInventorySummary(inventoryId);
         inventory.setInventoryStatus("COMPLETED");
         inventory.setRemark(remark);
         inventory.setInventoryTime(LocalDateTime.now());

@@ -29,6 +29,10 @@
           <span class="stat-value danger">{{ inventoryInfo?.diffCount || 0 }}</span>
         </div>
         <div class="stat-item">
+          <span class="stat-label">未盘数量</span>
+          <span class="stat-value warning">{{ pendingCount }}</span>
+        </div>
+        <div class="stat-item">
           <span class="stat-label">盘点月份</span>
           <span class="stat-value">{{ inventoryInfo?.inventoryMonth || '-' }}</span>
         </div>
@@ -94,7 +98,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getInventoryById, getInventoryDetail, markInventoryItem, completeInventory } from '@/api/inventory'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -105,6 +109,10 @@ const router = useRouter()
 const loading = ref(false)
 const inventoryInfo = ref(null)
 const detailList = ref([])
+
+const pendingCount = computed(() => {
+  return detailList.value.filter((item) => item.inventoryStatus === 0).length
+})
 
 const diffDialogVisible = ref(false)
 const diffForm = reactive({
@@ -237,7 +245,7 @@ onMounted(() => {
 
 .summary-stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 20px;
   padding: 20px 0 0 0;
   border-top: 1px solid #ebeef5;
@@ -266,6 +274,10 @@ onMounted(() => {
 
 .stat-value.danger {
   color: #f56c6c;
+}
+
+.stat-value.warning {
+  color: #e6a23c;
 }
 
 .card-header {
