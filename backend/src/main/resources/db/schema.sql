@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS stopper_shift (
     id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     stopper_id BIGINT NOT NULL COMMENT '挡块ID',
     stopper_no VARCHAR(50) DEFAULT NULL COMMENT '挡块编号',
+    spec VARCHAR(100) DEFAULT NULL COMMENT '规格型号（快照）',
+    adapt_equipment VARCHAR(200) DEFAULT NULL COMMENT '适配设备（快照）',
     from_station VARCHAR(100) DEFAULT NULL COMMENT '原工位',
     to_station VARCHAR(100) DEFAULT NULL COMMENT '目标工位',
     operator VARCHAR(100) DEFAULT NULL COMMENT '操作人',

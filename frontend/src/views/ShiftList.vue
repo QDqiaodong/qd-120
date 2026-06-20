@@ -12,8 +12,33 @@
     <el-card class="table-card">
       <el-table :data="tableData" v-loading="loading" border stripe>
         <el-table-column prop="stopperNo" label="挡块编号" width="130" />
-        <el-table-column prop="fromStation" label="原工位" width="140" />
-        <el-table-column prop="toStation" label="目标工位" width="140" />
+        <el-table-column prop="spec" label="规格型号" width="120">
+          <template #default="{ row }">
+            <span class="spec-tag">{{ row.spec || '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="adaptEquipment" label="适配设备" width="160" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ row.adaptEquipment || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="工位移位路径" min-width="280">
+          <template #default="{ row }">
+            <div class="shift-path">
+              <span :class="['station-tag', 'from-station', getStationClass(row.fromStation)]">
+                {{ row.fromStation }}
+              </span>
+              <span :class="['arrow-icon', isCrossZone(row) ? 'cross-zone' : '', isRepairMove(row) ? 'repair-move' : '']">
+                <el-icon><Right /></el-icon>
+              </span>
+              <span :class="['station-tag', 'to-station', getStationClass(row.toStation)]">
+                {{ row.toStation }}
+              </span>
+              <span v-if="isCrossZone(row)" class="cross-zone-badge">跨区</span>
+              <span v-if="isRepairMove(row)" class="repair-badge">维修</span>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="shiftReason" label="移位原因" min-width="180" />
         <el-table-column prop="operator" label="操作人" width="120" />
         <el-table-column prop="shiftTime" label="移位时间" width="170">
@@ -72,6 +97,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { getShiftList, addShift } from '@/api/shift'
 import { getStopperList, getStopperById } from '@/api/stopper'
 import { ElMessage } from 'element-plus'
+import { Right } from '@element-plus/icons-vue'
 
 const loading = ref(false)
 const tableData = ref([])
@@ -114,6 +140,32 @@ const formRules = {
 const formatDate = (date) => {
   if (!date) return '-'
   return new Date(date).toLocaleString('zh-CN')
+}
+
+const getZone = (station) => {
+  if (!station) return ''
+  const match = station.match(/^(.+?)区/)
+  return match ? match[1] : ''
+}
+
+const isCrossZone = (row) => {
+  const fromZone = getZone(row.fromStation)
+  const toZone = getZone(row.toStation)
+  return fromZone && toZone && fromZone !== toZone
+}
+
+const isRepairMove = (row) => {
+  const fromRepair = row.fromStation && row.fromStation.includes('维修')
+  const toRepair = row.toStation && row.toStation.includes('维修')
+  return fromRepair || toRepair
+}
+
+const getStationClass = (station) => {
+  if (!station) return ''
+  if (station.includes('维修')) return 'station-repair'
+  const zone = getZone(station)
+  if (zone) return `zone-${zone.toLowerCase()}`
+  return ''
 }
 
 const loadData = async () => {
@@ -226,5 +278,102 @@ onMounted(() => {
   font-weight: 600;
   margin: 0;
   color: #303133;
+}
+
+.spec-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #ecf5ff;
+  color: #409eff;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.shift-path {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.station-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  background: #f0f2f5;
+  color: #606266;
+}
+
+.station-tag.zone-a {
+  background: #ecf5ff;
+  color: #409eff;
+  border: 1px solid #d9ecff;
+}
+
+.station-tag.zone-b {
+  background: #f0f9eb;
+  color: #67c23a;
+  border: 1px solid #e1f3d8;
+}
+
+.station-tag.zone-c {
+  background: #fdf6ec;
+  color: #e6a23c;
+  border: 1px solid #faecd8;
+}
+
+.station-tag.station-repair {
+  background: #fef0f0;
+  color: #f56c6c;
+  border: 1px solid #fde2e2;
+  font-weight: 600;
+}
+
+.arrow-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #c0c4cc;
+  font-size: 16px;
+  transition: all 0.3s;
+}
+
+.arrow-icon.cross-zone {
+  color: #e6a23c;
+  font-weight: bold;
+  transform: scale(1.2);
+}
+
+.arrow-icon.repair-move {
+  color: #f56c6c;
+  font-weight: bold;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.cross-zone-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  background: #e6a23c;
+  color: #fff;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.repair-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  background: #f56c6c;
+  color: #fff;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 500;
 }
 </style>

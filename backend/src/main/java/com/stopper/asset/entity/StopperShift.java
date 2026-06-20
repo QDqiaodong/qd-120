@@ -17,6 +17,10 @@ public class StopperShift {
 
     private String stopperNo;
 
+    private String spec;
+
+    private String adaptEquipment;
+
     private String fromStation;
 
     private String toStation;

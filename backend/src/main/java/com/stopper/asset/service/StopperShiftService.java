@@ -60,6 +60,8 @@ public class StopperShiftService extends ServiceImpl<StopperShiftMapper, Stopper
 
         shift.setFromStation(fromStation);
         shift.setStopperNo(stopper.getStopperNo());
+        shift.setSpec(stopper.getSpec());
+        shift.setAdaptEquipment(stopper.getAdaptEquipment());
         shift.setShiftTime(LocalDateTime.now());
         shift.setCreateTime(LocalDateTime.now());
         shift.setDeleted(0);
