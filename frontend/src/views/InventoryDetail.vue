@@ -33,6 +33,10 @@
           <span class="stat-value warning">{{ pendingCount }}</span>
         </div>
         <div class="stat-item">
+          <span class="stat-label">待处理数量</span>
+          <span class="stat-value danger">{{ unprocessedCount }}</span>
+        </div>
+        <div class="stat-item">
           <span class="stat-label">盘点月份</span>
           <span class="stat-value">{{ inventoryInfo?.inventoryMonth || '-' }}</span>
         </div>
@@ -43,15 +47,25 @@
       <template #header>
         <div class="card-header">
           <span>挡块盘点明细</span>
-          <div class="header-actions" v-if="inventoryInfo?.inventoryStatus !== 'COMPLETED'">
-            <el-button type="success" @click="handleComplete">
+          <div class="header-actions">
+            <el-switch
+              v-model="showOnlyUnprocessed"
+              active-text="只看未处理差异"
+              inactive-text="显示全部"
+              size="large"
+            />
+            <el-button
+              v-if="inventoryInfo?.inventoryStatus !== 'COMPLETED'"
+              type="success"
+              @click="handleComplete"
+            >
               <el-icon><Check /></el-icon>完成盘点
             </el-button>
           </div>
         </div>
       </template>
 
-      <el-table :data="detailList" v-loading="loading" border stripe>
+      <el-table :data="filteredList" v-loading="loading" border stripe>
         <el-table-column prop="stopperNo" label="挡块编号" width="130" />
         <el-table-column prop="spec" label="规格型号" width="130" />
         <el-table-column prop="station" label="存放工位" width="130" />
@@ -109,12 +123,29 @@ const router = useRouter()
 const loading = ref(false)
 const inventoryInfo = ref(null)
 const detailList = ref([])
+const showOnlyUnprocessed = ref(false)
 
 const pendingCount = computed(() => {
   return detailList.value.filter((item) => {
     const status = item.inventoryStatus
     return status === undefined || status === null || status === 0 || (status !== 1 && status !== 2)
   }).length
+})
+
+const unprocessedCount = computed(() => {
+  return detailList.value.filter((item) => {
+    const status = item.inventoryStatus
+    return status !== 1
+  }).length
+})
+
+const filteredList = computed(() => {
+  if (!showOnlyUnprocessed.value) {
+    return detailList.value
+  }
+  return detailList.value.filter((item) => {
+    return item.inventoryStatus !== 1
+  })
 })
 
 const diffDialogVisible = ref(false)
@@ -260,10 +291,16 @@ onMounted(() => {
 
 .summary-stats {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 20px;
   padding: 20px 0 0 0;
   border-top: 1px solid #ebeef5;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .stat-item {
