@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.stopper.asset.entity.Stopper;
 import com.stopper.asset.entity.StopperShift;
 import com.stopper.asset.mapper.StopperMapper;
+import com.stopper.asset.mapper.StopperShiftMapper;
 import com.stopper.asset.vo.StopperEquipmentVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -26,7 +27,7 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
     private RedisTemplate<String, Object> redisTemplate;
 
     @Autowired
-    private StopperShiftService shiftService;
+    private StopperShiftMapper stopperShiftMapper;
 
     private static final String SPECS_CACHE_KEY = "stopper:specs";
     private static final long SPECS_CACHE_EXPIRE = 24;
@@ -75,7 +76,7 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
 
         Map<Long, LocalDateTime> lastShiftTimeMap = new HashMap<>();
         if (!stopperIds.isEmpty()) {
-            List<StopperShift> allShifts = shiftService.list(new LambdaQueryWrapper<StopperShift>()
+            List<StopperShift> allShifts = stopperShiftMapper.selectList(new LambdaQueryWrapper<StopperShift>()
                     .eq(StopperShift::getDeleted, 0)
                     .in(StopperShift::getStopperId, stopperIds)
                     .orderByDesc(StopperShift::getShiftTime));
