@@ -111,7 +111,10 @@ const inventoryInfo = ref(null)
 const detailList = ref([])
 
 const pendingCount = computed(() => {
-  return detailList.value.filter((item) => item.inventoryStatus === 0).length
+  return detailList.value.filter((item) => {
+    const status = item.inventoryStatus
+    return status === undefined || status === null || status === 0 || (status !== 1 && status !== 2)
+  }).length
 })
 
 const diffDialogVisible = ref(false)

@@ -84,7 +84,8 @@ const startForm = reactive({
 })
 
 const startRules = {
-  inventoryMonth: [{ required: true, message: '请选择盘点月份', trigger: 'change' }]
+  inventoryMonth: [{ required: true, message: '请选择盘点月份', trigger: 'change' }],
+  operator: [{ required: true, message: '请输入操作人', trigger: 'blur' }]
 }
 
 const formatDate = (date) => {
@@ -117,15 +118,20 @@ const handleStartSubmit = async () => {
   if (!startFormRef.value) return
   await startFormRef.value.validate(async (valid) => {
     if (valid) {
+      const trimmedMonth = startForm.inventoryMonth?.trim()
+      const trimmedOperator = startForm.operator?.trim()
       const existingProcessing = tableData.value.find(
-        (item) => item.inventoryMonth === startForm.inventoryMonth && item.inventoryStatus === 'PROCESSING'
+        (item) => item.inventoryMonth === trimmedMonth && item.inventoryStatus === 'PROCESSING'
       )
       if (existingProcessing) {
-        ElMessage.warning(`${startForm.inventoryMonth} 已有进行中的盘点单，请先完成后再发起`)
+        ElMessage.warning(`${trimmedMonth} 已有进行中的盘点单，请先完成后再发起`)
         return
       }
       try {
-        const result = await startInventory(startForm)
+        const result = await startInventory({
+          inventoryMonth: trimmedMonth,
+          operator: trimmedOperator
+        })
         ElMessage.success('盘点发起成功')
         startDialogVisible.value = false
         router.push(`/inventory/detail/${result.id}`)

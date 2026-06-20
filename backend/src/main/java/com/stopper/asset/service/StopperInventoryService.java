@@ -29,8 +29,15 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
 
     @Transactional(rollbackFor = Exception.class)
     public StopperInventory startInventory(String inventoryMonth, String operator) {
+        if (inventoryMonth == null || inventoryMonth.trim().isEmpty()) {
+            throw new RuntimeException("盘点月份不能为空");
+        }
+        if (operator == null || operator.trim().isEmpty()) {
+            throw new RuntimeException("操作人不能为空");
+        }
+
         Long existingProcessing = count(new LambdaQueryWrapper<StopperInventory>()
-                .eq(StopperInventory::getInventoryMonth, inventoryMonth)
+                .eq(StopperInventory::getInventoryMonth, inventoryMonth.trim())
                 .eq(StopperInventory::getInventoryStatus, "PROCESSING")
                 .eq(StopperInventory::getDeleted, 0));
         if (existingProcessing > 0) {
@@ -76,6 +83,10 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
 
     @Transactional(rollbackFor = Exception.class)
     public boolean markInventoryItem(Long detailId, Integer status, String diffReason) {
+        if (status == null || (status != 0 && status != 1 && status != 2)) {
+            throw new RuntimeException("非法的盘点状态值，合法值为 0(未盘)、1(已盘)、2(差异)");
+        }
+
         StopperInventoryDetail detail = detailService.getById(detailId);
         if (detail == null) {
             throw new RuntimeException("盘点明细不存在");
@@ -101,9 +112,10 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
         int actualCount = 0;
         int diffCount = 0;
         for (StopperInventoryDetail detail : details) {
-            if (detail.getInventoryStatus() == 1) {
+            Integer status = detail.getInventoryStatus();
+            if (status != null && status == 1) {
                 actualCount++;
-            } else if (detail.getInventoryStatus() == 2) {
+            } else if (status != null && status == 2) {
                 diffCount++;
             }
         }
@@ -123,7 +135,10 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
         }
         List<StopperInventoryDetail> details = detailService.getByInventoryId(inventoryId);
         long pendingCount = details.stream()
-                .filter(detail -> detail.getInventoryStatus() == 0)
+                .filter(detail -> {
+                    Integer status = detail.getInventoryStatus();
+                    return status == null || status == 0 || (status != 1 && status != 2);
+                })
                 .count();
         if (pendingCount > 0) {
             throw new RuntimeException("还有 " + pendingCount + " 项挡块未盘点，请全部处理后再完成盘点");
@@ -170,13 +185,22 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
         List<StopperInventoryDetail> details = detailService.getByInventoryId(inventory.getId());
         
         List<StopperInventoryDetail> countedList = details.stream()
-                .filter(d -> d.getInventoryStatus() == 1)
+                .filter(d -> {
+                    Integer status = d.getInventoryStatus();
+                    return status != null && status == 1;
+                })
                 .collect(Collectors.toList());
         List<StopperInventoryDetail> discrepancyList = details.stream()
-                .filter(d -> d.getInventoryStatus() == 2)
+                .filter(d -> {
+                    Integer status = d.getInventoryStatus();
+                    return status != null && status == 2;
+                })
                 .collect(Collectors.toList());
         List<StopperInventoryDetail> unprocessedList = details.stream()
-                .filter(d -> d.getInventoryStatus() == 0)
+                .filter(d -> {
+                    Integer status = d.getInventoryStatus();
+                    return status == null || status == 0 || (status != 1 && status != 2);
+                })
                 .collect(Collectors.toList());
         
         int total = details.size();
