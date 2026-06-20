@@ -9,11 +9,27 @@
       </div>
     </el-card>
 
+    <WearLevelLegend ref="wearLegendRef" />
+
     <el-card class="table-card">
       <el-table :data="tableData" v-loading="loading" border stripe>
         <el-table-column prop="stopperNo" label="挡块编号" width="130" />
         <el-table-column prop="spec" label="规格型号" width="130" />
-        <el-table-column prop="scrapDegree" label="磨损程度" width="120" />
+        <el-table-column prop="scrapDegree" label="磨损程度" width="130">
+          <template #default="{ row }">
+            <el-tag
+              :type="wearLegendRef?.getWearLevelTagType(row.scrapDegree) || 'info'"
+              size="small"
+              effect="light"
+            >
+              <span
+                class="degree-dot"
+                :style="{ background: wearLegendRef?.getWearLevelColor(row.scrapDegree) || '#909399' }"
+              ></span>
+              {{ row.scrapDegree }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="scrapReason" label="报废原因" min-width="200" show-overflow-tooltip />
         <el-table-column prop="operator" label="操作人" width="100" />
         <el-table-column prop="scrapTime" label="报废时间" width="170">
@@ -75,11 +91,23 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="viewDialogVisible" title="报废详情" width="500px">
+    <el-dialog v-model="viewDialogVisible" title="报废详情" width="550px">
       <el-descriptions :column="2" border>
         <el-descriptions-item label="挡块编号">{{ viewData.stopperNo }}</el-descriptions-item>
         <el-descriptions-item label="规格型号">{{ viewData.spec }}</el-descriptions-item>
-        <el-descriptions-item label="磨损程度">{{ viewData.scrapDegree }}</el-descriptions-item>
+        <el-descriptions-item label="磨损程度">
+          <el-tag
+            :type="wearLegendRef?.getWearLevelTagType(viewData.scrapDegree) || 'info'"
+            size="small"
+            effect="light"
+          >
+            <span
+              class="degree-dot"
+              :style="{ background: wearLegendRef?.getWearLevelColor(viewData.scrapDegree) || '#909399' }"
+            ></span>
+            {{ viewData.scrapDegree }}
+          </el-tag>
+        </el-descriptions-item>
         <el-descriptions-item label="操作人">{{ viewData.operator }}</el-descriptions-item>
         <el-descriptions-item label="报废时间" :span="2">
           {{ formatDate(viewData.scrapTime) }}
@@ -91,6 +119,9 @@
           {{ viewData.remark || '-' }}
         </el-descriptions-item>
       </el-descriptions>
+      <div class="legend-section" style="margin-top: 20px">
+        <WearLevelLegend :highlight="viewData.scrapDegree" />
+      </div>
       <template #footer>
         <el-button type="primary" @click="viewDialogVisible = false">关闭</el-button>
       </template>
@@ -103,6 +134,9 @@ import { ref, reactive, onMounted } from 'vue'
 import { getScrapList, addScrap } from '@/api/scrap'
 import { getStopperList } from '@/api/stopper'
 import { ElMessage } from 'element-plus'
+import WearLevelLegend from '@/components/WearLevelLegend.vue'
+
+const wearLegendRef = ref(null)
 
 const loading = ref(false)
 const tableData = ref([])
@@ -233,5 +267,14 @@ onMounted(() => {
   font-weight: 600;
   margin: 0;
   color: #303133;
+}
+
+.degree-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
 }
 </style>

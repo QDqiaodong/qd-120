@@ -92,4 +92,11 @@ public class StopperScrapService extends ServiceImpl<StopperScrapMapper, Stopper
                 .filter(s -> existingIds.contains(s.getStopperId()))
                 .collect(Collectors.toList());
     }
+
+    public List<StopperScrap> getScrapsByStopperId(Long stopperId) {
+        return list(new LambdaQueryWrapper<StopperScrap>()
+                .eq(StopperScrap::getStopperId, stopperId)
+                .eq(StopperScrap::getDeleted, 0)
+                .orderByDesc(StopperScrap::getScrapTime));
+    }
 }

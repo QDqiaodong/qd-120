@@ -18,6 +18,12 @@ const routes = [
     meta: { title: '挡块档案' }
   },
   {
+    path: '/stopper/detail/:id',
+    name: 'StopperDetail',
+    component: () => import('@/views/StopperDetail.vue'),
+    meta: { title: '挡块详情' }
+  },
+  {
     path: '/device-stopper',
     name: 'DeviceStopper',
     component: () => import('@/views/DeviceStopperView.vue'),

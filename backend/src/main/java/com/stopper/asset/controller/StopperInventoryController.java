@@ -4,6 +4,7 @@ import com.stopper.asset.common.Result;
 import com.stopper.asset.entity.StopperInventory;
 import com.stopper.asset.entity.StopperInventoryDetail;
 import com.stopper.asset.service.StopperInventoryService;
+import com.stopper.asset.vo.InventoryProgressVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -55,5 +56,10 @@ public class StopperInventoryController {
         String remark = params.get("remark") != null ? params.get("remark").toString() : null;
         boolean result = inventoryService.completeInventory(inventoryId, remark);
         return result ? Result.success("盘点完成") : Result.error("操作失败");
+    }
+
+    @GetMapping("/progress")
+    public Result<InventoryProgressVO> getCurrentMonthProgress() {
+        return Result.success(inventoryService.getCurrentMonthProgress());
     }
 }

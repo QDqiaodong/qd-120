@@ -21,3 +21,10 @@ export function addScrap(data) {
     data
   })
 }
+
+export function getScrapByStopperId(stopperId) {
+  return request({
+    url: `/scrap/stopper/${stopperId}`,
+    method: 'get'
+  })
+}

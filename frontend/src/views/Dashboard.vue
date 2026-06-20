@@ -50,6 +50,8 @@
       </el-card>
     </div>
 
+    <InventoryProgressPanel />
+
     <el-card class="station-view-card">
       <template #header>
         <div class="card-header">
@@ -105,8 +107,12 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { getStopperList, getStopperGroupByStation } from '@/api/stopper'
 import { ElMessage } from 'element-plus'
+import InventoryProgressPanel from '@/components/InventoryProgressPanel.vue'
+
+const router = useRouter()
 
 const loading = ref(false)
 const stopperList = ref([])
@@ -134,7 +140,7 @@ const loadData = async () => {
 }
 
 const viewStopper = (stopper) => {
-  ElMessage.info(`挡块编号: ${stopper.stopperNo}`)
+  router.push(`/stopper/detail/${stopper.id}`)
 }
 
 onMounted(() => {

@@ -30,4 +30,9 @@ public class StopperScrapController {
         boolean result = scrapService.addScrap(scrap);
         return result ? Result.success("报废登记成功") : Result.error("登记失败");
     }
+
+    @GetMapping("/stopper/{stopperId}")
+    public Result<List<StopperScrap>> getByStopperId(@PathVariable Long stopperId) {
+        return Result.success(scrapService.getScrapsByStopperId(stopperId));
+    }
 }

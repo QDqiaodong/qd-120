@@ -163,9 +163,12 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { getStopperPage, getAllStations, addStopper, updateStopper, deleteStopper } from '@/api/stopper'
 import { addShift } from '@/api/shift'
 import { ElMessage, ElMessageBox } from 'element-plus'
+
+const router = useRouter()
 
 const loading = ref(false)
 const tableData = ref([])
@@ -299,11 +302,7 @@ const handleEdit = (row) => {
 }
 
 const handleView = (row) => {
-  ElMessageBox.alert(
-    `挡块编号: ${row.stopperNo}\n规格: ${row.spec}\n适配设备: ${row.adaptEquipment}\n工位: ${row.station}\n状态: ${row.status === 1 ? '正常' : '报废'}`,
-    '挡块详情',
-    { confirmButtonText: '确定' }
-  )
+  router.push(`/stopper/detail/${row.id}`)
 }
 
 const resetForm = () => {

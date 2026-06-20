@@ -44,3 +44,10 @@ export function completeInventory(data) {
     data
   })
 }
+
+export function getInventoryProgress() {
+  return request({
+    url: '/inventory/progress',
+    method: 'get'
+  })
+}
