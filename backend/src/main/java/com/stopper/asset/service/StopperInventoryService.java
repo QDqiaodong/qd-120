@@ -8,14 +8,18 @@ import com.stopper.asset.entity.StopperInventoryDetail;
 import com.stopper.asset.mapper.StopperInventoryMapper;
 import com.stopper.asset.vo.InventoryProgressVO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,7 +31,9 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
     @Autowired
     private StopperInventoryDetailService detailService;
 
-    @Transactional(rollbackFor = Exception.class)
+    @Autowired
+    private PlatformTransactionManager transactionManager;
+
     public StopperInventory startInventory(String inventoryMonth, String operator) {
         if (inventoryMonth == null || inventoryMonth.trim().isEmpty()) {
             throw new RuntimeException("盘点月份不能为空");
@@ -36,6 +42,27 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
             throw new RuntimeException("操作人不能为空");
         }
 
+        TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
+        int maxRetries = 5;
+        DuplicateKeyException lastException = null;
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+            final String inventoryNo = generateInventoryNo();
+            try {
+                return txTemplate.execute(status -> doStartInventory(inventoryMonth, operator, inventoryNo));
+            } catch (DuplicateKeyException e) {
+                lastException = e;
+            }
+        }
+        throw new RuntimeException("盘点单号生成冲突，请稍后重试", lastException);
+    }
+
+    private String generateInventoryNo() {
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
+        int random = ThreadLocalRandom.current().nextInt(10000);
+        return "INV" + timestamp + String.format("%04d", random);
+    }
+
+    private StopperInventory doStartInventory(String inventoryMonth, String operator, String inventoryNo) {
         Long existingProcessing = count(new LambdaQueryWrapper<StopperInventory>()
                 .eq(StopperInventory::getInventoryMonth, inventoryMonth.trim())
                 .eq(StopperInventory::getInventoryStatus, "PROCESSING")
@@ -43,8 +70,6 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
         if (existingProcessing > 0) {
             throw new RuntimeException("该月份已有进行中的盘点单，请先完成或作废后再发起");
         }
-
-        String inventoryNo = "INV" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
 
         StopperInventory inventory = new StopperInventory();
         inventory.setInventoryNo(inventoryNo);
@@ -92,6 +117,14 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
             throw new RuntimeException("盘点明细不存在");
         }
 
+        StopperInventory inventory = getById(detail.getInventoryId());
+        if (inventory == null) {
+            throw new RuntimeException("盘点记录不存在");
+        }
+        if ("COMPLETED".equals(inventory.getInventoryStatus())) {
+            throw new RuntimeException("该盘点单已完成，无法继续标记明细");
+        }
+
         Stopper stopper = stopperService.getOne(new LambdaQueryWrapper<Stopper>()
                 .eq(Stopper::getId, detail.getStopperId())
                 .eq(Stopper::getDeleted, 0));
@@ -132,6 +165,9 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
         StopperInventory inventory = getById(inventoryId);
         if (inventory == null) {
             throw new RuntimeException("盘点记录不存在");
+        }
+        if ("COMPLETED".equals(inventory.getInventoryStatus())) {
+            throw new RuntimeException("该盘点单已完成，无法重复完成");
         }
         List<StopperInventoryDetail> details = detailService.getByInventoryId(inventoryId);
         long pendingCount = details.stream()
