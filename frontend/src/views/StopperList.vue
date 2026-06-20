@@ -11,9 +11,24 @@
             style="width: 200px"
           />
         </el-form-item>
+        <el-form-item label="规格">
+          <el-select v-model="filterForm.spec" placeholder="全部规格" clearable filterable style="width: 160px">
+            <el-option v-for="s in specs" :key="s" :label="s" :value="s" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="工位">
-          <el-select v-model="filterForm.station" placeholder="全部工位" clearable style="width: 160px">
-            <el-option v-for="s in stations" :key="s" :label="s" :value="s" />
+          <el-select
+            v-model="filterForm.station"
+            placeholder="全部工位"
+            clearable
+            filterable
+            remote
+            reserve-keyword
+            :remote-method="remoteSearchStation"
+            :loading="stationLoading"
+            style="width: 160px"
+          >
+            <el-option v-for="s in filterStations" :key="s" :label="s" :value="s" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态">
@@ -114,13 +129,35 @@
           <el-input v-model="stopperForm.stopperNo" placeholder="请输入挡块编号" />
         </el-form-item>
         <el-form-item label="规格型号" prop="spec">
-          <el-input v-model="stopperForm.spec" placeholder="请输入规格型号" />
+          <el-select
+            v-model="stopperForm.spec"
+            placeholder="请选择或输入规格型号"
+            filterable
+            allow-create
+            default-first-option
+            style="width: 100%"
+          >
+            <el-option v-for="s in specs" :key="s" :label="s" :value="s" />
+          </el-select>
         </el-form-item>
         <el-form-item label="适配设备" prop="adaptEquipment">
           <el-input v-model="stopperForm.adaptEquipment" placeholder="请输入适配设备" />
         </el-form-item>
         <el-form-item label="存放工位" prop="station">
-          <el-input v-model="stopperForm.station" placeholder="请输入存放工位" />
+          <el-select
+            v-model="stopperForm.station"
+            placeholder="请选择或输入存放工位"
+            filterable
+            allow-create
+            default-first-option
+            remote
+            reserve-keyword
+            :remote-method="remoteSearchStationForm"
+            :loading="formStationLoading"
+            style="width: 100%"
+          >
+            <el-option v-for="s in formStations" :key="s" :label="s" :value="s" />
+          </el-select>
         </el-form-item>
         <el-form-item label="图片地址">
           <el-input v-model="stopperForm.imageUrl" placeholder="请输入图片URL" />
@@ -144,7 +181,20 @@
           <el-input :value="shiftForm.fromStation" disabled />
         </el-form-item>
         <el-form-item label="目标工位" prop="toStation">
-          <el-input v-model="shiftForm.toStation" placeholder="请输入目标工位" />
+          <el-select
+            v-model="shiftForm.toStation"
+            placeholder="请选择或输入目标工位"
+            filterable
+            allow-create
+            default-first-option
+            remote
+            reserve-keyword
+            :remote-method="remoteSearchStationShift"
+            :loading="shiftStationLoading"
+            style="width: 100%"
+          >
+            <el-option v-for="s in shiftStations" :key="s" :label="s" :value="s" />
+          </el-select>
         </el-form-item>
         <el-form-item label="操作人">
           <el-input v-model="shiftForm.operator" placeholder="请输入操作人" />
@@ -164,7 +214,15 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { getStopperPage, getAllStations, addStopper, updateStopper, deleteStopper } from '@/api/stopper'
+import {
+  getStopperPage,
+  getAllStations as getStopperStations,
+  getAllSpecs,
+  addStopper,
+  updateStopper,
+  deleteStopper
+} from '@/api/stopper'
+import { getStationNames, ensureStation } from '@/api/station'
 import { addShift } from '@/api/shift'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -175,10 +233,17 @@ const tableData = ref([])
 const total = ref(0)
 const pageNum = ref(1)
 const pageSize = ref(10)
-const stations = ref([])
+const specs = ref([])
+const filterStations = ref([])
+const stationLoading = ref(false)
+const formStations = ref([])
+const formStationLoading = ref(false)
+const shiftStations = ref([])
+const shiftStationLoading = ref(false)
 
 const filterForm = reactive({
   keyword: '',
+  spec: '',
   station: '',
   status: ''
 })
@@ -247,6 +312,7 @@ const loadData = async () => {
       pageNum: pageNum.value,
       pageSize: pageSize.value,
       keyword: filterForm.keyword || undefined,
+      spec: filterForm.spec || undefined,
       station: filterForm.station || undefined,
       status: filterForm.status !== '' ? filterForm.status : undefined
     })
@@ -259,11 +325,83 @@ const loadData = async () => {
   }
 }
 
-const loadStations = async () => {
+const loadSpecs = async () => {
   try {
-    stations.value = await getAllStations()
+    specs.value = await getAllSpecs()
   } catch (error) {
-    console.error('加载工位列表失败')
+    console.error('加载规格列表失败')
+  }
+}
+
+const loadFilterStations = async () => {
+  try {
+    filterStations.value = await getStationNames()
+  } catch (error) {
+    console.error('加载工位列表失败，使用挡块表工位兜底')
+    try {
+      filterStations.value = await getStopperStations()
+    } catch (e) {
+      console.error('加载工位列表失败')
+    }
+  }
+}
+
+const loadFormStations = async () => {
+  try {
+    formStations.value = await getStationNames()
+  } catch (error) {
+    console.error('加载工位列表失败，使用挡块表工位兜底')
+    try {
+      formStations.value = await getStopperStations()
+    } catch (e) {
+      console.error('加载工位列表失败')
+    }
+  }
+}
+
+const loadShiftStations = async () => {
+  try {
+    shiftStations.value = await getStationNames()
+  } catch (error) {
+    console.error('加载工位列表失败，使用挡块表工位兜底')
+    try {
+      shiftStations.value = await getStopperStations()
+    } catch (e) {
+      console.error('加载工位列表失败')
+    }
+  }
+}
+
+const remoteSearchStation = async (query) => {
+  stationLoading.value = true
+  try {
+    filterStations.value = await getStationNames(query)
+  } catch (error) {
+    console.error('搜索工位失败')
+  } finally {
+    stationLoading.value = false
+  }
+}
+
+const remoteSearchStationForm = async (query) => {
+  formStationLoading.value = true
+  try {
+    formStations.value = await getStationNames(query)
+  } catch (error) {
+    console.error('搜索工位失败')
+  } finally {
+    formStationLoading.value = false
+  }
+}
+
+const remoteSearchStationShift = async (query) => {
+  shiftStationLoading.value = true
+  try {
+    shiftStations.value = await getStationNames(query)
+  } catch (error) {
+    console.error('搜索工位失败')
+  } finally {
+    shiftStationLoading.value = false
   }
 }
 
@@ -274,6 +412,7 @@ const handleSearch = () => {
 
 const handleReset = () => {
   filterForm.keyword = ''
+  filterForm.spec = ''
   filterForm.station = ''
   filterForm.status = ''
   pageNum.value = 1
@@ -283,6 +422,7 @@ const handleReset = () => {
 const handleAdd = () => {
   isEdit.value = false
   dialogTitle.value = '新增挡块'
+  loadFormStations()
   dialogVisible.value = true
 }
 
@@ -298,6 +438,7 @@ const handleEdit = (row) => {
     imageUrl: row.imageUrl || '',
     remark: row.remark || ''
   })
+  loadFormStations()
   dialogVisible.value = true
 }
 
@@ -321,6 +462,13 @@ const handleSubmit = async () => {
   await formRef.value.validate(async (valid) => {
     if (valid) {
       try {
+        if (stopperForm.station) {
+          try {
+            await ensureStation(stopperForm.station.trim())
+          } catch (e) {
+            console.warn('确保工位存在失败，可能已在挡块新增时自动处理')
+          }
+        }
         if (isEdit.value) {
           await updateStopper(stopperForm)
           ElMessage.success('更新成功')
@@ -330,7 +478,8 @@ const handleSubmit = async () => {
         }
         dialogVisible.value = false
         loadData()
-        loadStations()
+        loadSpecs()
+        loadFilterStations()
       } catch (error) {
         if (error.fieldErrors) {
           const fields = []
@@ -359,7 +508,7 @@ const handleDelete = (row) => {
       await deleteStopper(row.id)
       ElMessage.success('删除成功')
       loadData()
-      loadStations()
+      loadSpecs()
     } catch (error) {
       ElMessage.error('删除失败')
     }
@@ -373,6 +522,7 @@ const handleShift = (row) => {
   shiftForm.toStation = ''
   shiftForm.operator = ''
   shiftForm.shiftReason = ''
+  loadShiftStations()
   shiftDialogVisible.value = true
 }
 
@@ -391,11 +541,18 @@ const handleShiftSubmit = async () => {
   await shiftFormRef.value.validate(async (valid) => {
     if (valid) {
       try {
+        if (shiftForm.toStation) {
+          try {
+            await ensureStation(shiftForm.toStation.trim())
+          } catch (e) {
+            console.warn('确保工位存在失败，可能已在移位时自动处理')
+          }
+        }
         await addShift(shiftForm)
         ElMessage.success('移位登记成功')
         shiftDialogVisible.value = false
         loadData()
-        loadStations()
+        loadFilterStations()
       } catch (error) {
         if (error.fieldErrors) {
           const fields = []
@@ -424,7 +581,8 @@ const handlePageChange = (val) => {
 
 onMounted(() => {
   loadData()
-  loadStations()
+  loadSpecs()
+  loadFilterStations()
 })
 </script>
 

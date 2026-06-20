@@ -4,12 +4,15 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.stopper.asset.entity.Stopper;
 import com.stopper.asset.entity.StopperShift;
+import com.stopper.asset.entity.StopperStation;
 import com.stopper.asset.mapper.StopperMapper;
 import com.stopper.asset.mapper.StopperShiftMapper;
+import com.stopper.asset.mapper.StopperStationMapper;
 import com.stopper.asset.vo.StopperEquipmentVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -28,6 +31,9 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
 
     @Autowired
     private StopperShiftMapper stopperShiftMapper;
+
+    @Autowired
+    private StopperStationMapper stopperStationMapper;
 
     private static final String SPECS_CACHE_KEY = "stopper:specs";
     private static final long SPECS_CACHE_EXPIRE = 24;
@@ -49,7 +55,7 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
     }
 
     public List<String> getAllStations() {
-        return baseMapper.selectAllStations();
+        return stopperStationMapper.selectAllStationNames();
     }
 
     public List<String> getAllEquipments() {
@@ -126,6 +132,7 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
         return count(wrapper) > 0;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean addStopper(Stopper stopper) {
         if (existsByStopperNo(stopper.getStopperNo(), null)) {
             return false;
@@ -135,6 +142,7 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
         stopper.setCreateTime(LocalDateTime.now());
         stopper.setUpdateTime(LocalDateTime.now());
         stopper.setDeleted(0);
+        ensureStationRecorded(stopper.getStation());
         boolean result = save(stopper);
         if (result) {
             evictSpecsCache();
@@ -142,16 +150,50 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
         return result;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean updateStopper(Stopper stopper) {
         if (existsByStopperNo(stopper.getStopperNo(), stopper.getId())) {
             return false;
         }
         stopper.setUpdateTime(LocalDateTime.now());
+        ensureStationRecorded(stopper.getStation());
         boolean result = updateById(stopper);
         if (result) {
             evictSpecsCache();
         }
         return result;
+    }
+
+    private void ensureStationRecorded(String stationName) {
+        if (stationName == null || stationName.trim().isEmpty()) {
+            return;
+        }
+        String trimmedStation = stationName.trim();
+        Long count = stopperStationMapper.selectCount(
+                new LambdaQueryWrapper<StopperStation>()
+                        .eq(StopperStation::getStationName, trimmedStation)
+                        .eq(StopperStation::getDeleted, 0)
+        );
+        if (count != null && count > 0) {
+            return;
+        }
+        StopperStation newStation = new StopperStation();
+        newStation.setStationName(trimmedStation);
+        String zone = extractZone(trimmedStation);
+        newStation.setZone(zone);
+        newStation.setCreateTime(LocalDateTime.now());
+        newStation.setUpdateTime(LocalDateTime.now());
+        newStation.setDeleted(0);
+        stopperStationMapper.insert(newStation);
+    }
+
+    private String extractZone(String stationName) {
+        if (stationName == null) return null;
+        int idx = stationName.indexOf("区");
+        if (idx > 0) {
+            return stationName.substring(0, idx + 1);
+        }
+        return null;
     }
 
     public boolean deleteStopper(Long id) {
@@ -166,7 +208,9 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
         return result;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean updateStation(Long id, String station) {
+        ensureStationRecorded(station);
         Stopper stopper = new Stopper();
         stopper.setId(id);
         stopper.setStation(station);

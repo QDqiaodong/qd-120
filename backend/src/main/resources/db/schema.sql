@@ -20,8 +20,31 @@ CREATE TABLE IF NOT EXISTS stopper (
     KEY idx_station (station),
     KEY idx_spec (spec),
     KEY idx_status (status),
-    KEY idx_adapt_equipment (adapt_equipment)
+    KEY idx_adapt_equipment (adapt_equipment),
+    KEY idx_combo_filter (spec, station, status, stopper_no)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='限位挡块基础档案表';
+
+CREATE TABLE IF NOT EXISTS stopper_station (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    station_name VARCHAR(100) NOT NULL COMMENT '工位名称',
+    zone VARCHAR(50) DEFAULT NULL COMMENT '所属区域',
+    remark VARCHAR(500) DEFAULT NULL COMMENT '备注',
+    create_time DATETIME DEFAULT NULL COMMENT '创建时间',
+    update_time DATETIME DEFAULT NULL COMMENT '更新时间',
+    deleted TINYINT DEFAULT 0 COMMENT '逻辑删除：0-未删除，1-已删除',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_station_name (station_name),
+    KEY idx_zone (zone)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='工位配置表';
+
+INSERT IGNORE INTO stopper_station (station_name, zone, remark, create_time, update_time, deleted) VALUES
+('A区-工位01', 'A区', 'A区1号工位', '2024-01-01 00:00:00', '2024-01-01 00:00:00', 0),
+('A区-工位02', 'A区', 'A区2号工位', '2024-01-01 00:00:00', '2024-01-01 00:00:00', 0),
+('A区-工位03', 'A区', 'A区3号工位', '2024-01-01 00:00:00', '2024-01-01 00:00:00', 0),
+('B区-工位01', 'B区', 'B区1号工位', '2024-01-01 00:00:00', '2024-01-01 00:00:00', 0),
+('B区-工位02', 'B区', 'B区2号工位', '2024-01-01 00:00:00', '2024-01-01 00:00:00', 0),
+('C区-工位01', 'C区', 'C区1号工位', '2024-01-01 00:00:00', '2024-01-01 00:00:00', 0),
+('维修区', '维修区', '维修工位', '2024-01-01 00:00:00', '2024-01-01 00:00:00', 0);
 
 CREATE TABLE IF NOT EXISTS stopper_shift (
     id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',

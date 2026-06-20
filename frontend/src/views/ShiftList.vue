@@ -72,7 +72,20 @@
           <el-input :value="currentStation" disabled placeholder="选择挡块后自动显示" />
         </el-form-item>
         <el-form-item label="目标工位" prop="toStation">
-          <el-input v-model="shiftForm.toStation" placeholder="请输入目标工位" />
+          <el-select
+            v-model="shiftForm.toStation"
+            placeholder="请选择或输入目标工位"
+            filterable
+            allow-create
+            default-first-option
+            remote
+            reserve-keyword
+            :remote-method="remoteSearchStation"
+            :loading="stationLoading"
+            style="width: 100%"
+          >
+            <el-option v-for="s in stationOptions" :key="s" :label="s" :value="s" />
+          </el-select>
         </el-form-item>
         <el-form-item label="操作人">
           <el-input v-model="shiftForm.operator" placeholder="请输入操作人" />
@@ -95,13 +108,16 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { getShiftList, addShift } from '@/api/shift'
-import { getStopperList, getStopperById } from '@/api/stopper'
+import { getStopperList, getStopperById, getAllStations as getStopperStations } from '@/api/stopper'
+import { getStationNames, ensureStation } from '@/api/station'
 import { ElMessage } from 'element-plus'
 import { Right } from '@element-plus/icons-vue'
 
 const loading = ref(false)
 const tableData = ref([])
 const stopperList = ref([])
+const stationOptions = ref([])
+const stationLoading = ref(false)
 
 const dialogVisible = ref(false)
 const formRef = ref(null)
@@ -188,6 +204,30 @@ const loadStoppers = async () => {
   }
 }
 
+const loadStations = async () => {
+  try {
+    stationOptions.value = await getStationNames()
+  } catch (error) {
+    console.error('加载工位列表失败，使用挡块表工位兜底')
+    try {
+      stationOptions.value = await getStopperStations()
+    } catch (e) {
+      console.error('加载工位列表失败')
+    }
+  }
+}
+
+const remoteSearchStation = async (query) => {
+  stationLoading.value = true
+  try {
+    stationOptions.value = await getStationNames(query)
+  } catch (error) {
+    console.error('搜索工位失败')
+  } finally {
+    stationLoading.value = false
+  }
+}
+
 const handleStopperChange = async (stopperId) => {
   if (formRef.value) {
     formRef.value.clearValidate()
@@ -209,6 +249,7 @@ const handleStopperChange = async (stopperId) => {
 }
 
 const handleAdd = () => {
+  loadStations()
   dialogVisible.value = true
 }
 
@@ -228,6 +269,13 @@ const handleSubmit = async () => {
   await formRef.value.validate(async (valid) => {
     if (valid) {
       try {
+        if (shiftForm.toStation) {
+          try {
+            await ensureStation(shiftForm.toStation.trim())
+          } catch (e) {
+            console.warn('确保工位存在失败，可能已在移位时自动处理')
+          }
+        }
         await addShift(shiftForm)
         ElMessage.success('登记成功')
         dialogVisible.value = false
