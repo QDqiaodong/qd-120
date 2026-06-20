@@ -331,14 +331,15 @@ const handleSubmit = async () => {
         }
         dialogVisible.value = false
         loadData()
+        loadStations()
       } catch (error) {
         if (error.fieldErrors) {
-          const fields = {}
+          const fields = []
           Object.keys(error.fieldErrors).forEach(field => {
-            fields[field] = {
-              message: error.fieldErrors[field],
-              field: field
-            }
+            fields.push({
+              field: field,
+              message: error.fieldErrors[field]
+            })
           })
           formRef.value.setFields(fields)
         } else {
@@ -359,6 +360,7 @@ const handleDelete = (row) => {
       await deleteStopper(row.id)
       ElMessage.success('删除成功')
       loadData()
+      loadStations()
     } catch (error) {
       ElMessage.error('删除失败')
     }
@@ -394,14 +396,15 @@ const handleShiftSubmit = async () => {
         ElMessage.success('移位登记成功')
         shiftDialogVisible.value = false
         loadData()
+        loadStations()
       } catch (error) {
         if (error.fieldErrors) {
-          const fields = {}
+          const fields = []
           Object.keys(error.fieldErrors).forEach(field => {
-            fields[field] = {
-              message: error.fieldErrors[field],
-              field: field
-            }
+            fields.push({
+              field: field,
+              message: error.fieldErrors[field]
+            })
           })
           shiftFormRef.value.setFields(fields)
         }

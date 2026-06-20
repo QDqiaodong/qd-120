@@ -183,12 +183,12 @@ const handleSubmit = async () => {
         loadStoppers()
       } catch (error) {
         if (error.fieldErrors) {
-          const fields = {}
+          const fields = []
           Object.keys(error.fieldErrors).forEach(field => {
-            fields[field] = {
-              message: error.fieldErrors[field],
-              field: field
-            }
+            fields.push({
+              field: field,
+              message: error.fieldErrors[field]
+            })
           })
           formRef.value.setFields(fields)
         }
