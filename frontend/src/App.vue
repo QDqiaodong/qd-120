@@ -28,6 +28,10 @@
             <el-icon><Document /></el-icon>
             <span>挡块档案</span>
           </el-menu-item>
+          <el-menu-item index="/device-stopper">
+            <el-icon><Cpu /></el-icon>
+            <span>适配设备视图</span>
+          </el-menu-item>
           <el-menu-item index="/shift">
             <el-icon><Switch /></el-icon>
             <span>移位登记</span>

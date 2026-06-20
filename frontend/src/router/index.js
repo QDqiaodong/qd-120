@@ -18,6 +18,12 @@ const routes = [
     meta: { title: '挡块档案' }
   },
   {
+    path: '/device-stopper',
+    name: 'DeviceStopper',
+    component: () => import('@/views/DeviceStopperView.vue'),
+    meta: { title: '适配设备视图' }
+  },
+  {
     path: '/shift',
     name: 'Shift',
     component: () => import('@/views/ShiftList.vue'),

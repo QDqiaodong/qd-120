@@ -22,6 +22,13 @@ export function getStopperGroupByStation() {
   })
 }
 
+export function getStopperGroupByEquipment() {
+  return request({
+    url: '/stopper/group-by-equipment',
+    method: 'get'
+  })
+}
+
 export function getStopperById(id) {
   return request({
     url: `/stopper/${id}`,

@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.stopper.asset.common.Result;
 import com.stopper.asset.entity.Stopper;
 import com.stopper.asset.service.StopperService;
+import com.stopper.asset.vo.StopperEquipmentVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -52,6 +53,11 @@ public class StopperController {
     @GetMapping("/group-by-station")
     public Result<Map<String, List<Stopper>>> groupByStation() {
         return Result.success(stopperService.getStoppersGroupByStation());
+    }
+
+    @GetMapping("/group-by-equipment")
+    public Result<Map<String, List<StopperEquipmentVO>>> groupByEquipment() {
+        return Result.success(stopperService.getStoppersGroupByEquipment());
     }
 
     @GetMapping("/{id}")

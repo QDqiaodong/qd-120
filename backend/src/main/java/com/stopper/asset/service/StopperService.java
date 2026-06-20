@@ -3,12 +3,17 @@ package com.stopper.asset.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.stopper.asset.entity.Stopper;
+import com.stopper.asset.entity.StopperShift;
 import com.stopper.asset.mapper.StopperMapper;
+import com.stopper.asset.vo.StopperEquipmentVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -19,6 +24,9 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
+
+    @Autowired
+    private StopperShiftService shiftService;
 
     private static final String SPECS_CACHE_KEY = "stopper:specs";
     private static final long SPECS_CACHE_EXPIRE = 24;
@@ -53,6 +61,48 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
                 .eq(Stopper::getDeleted, 0)
                 .orderByAsc(Stopper::getStation, Stopper::getStopperNo));
         return all.stream().collect(Collectors.groupingBy(Stopper::getStation));
+    }
+
+    public Map<String, List<StopperEquipmentVO>> getStoppersGroupByEquipment() {
+        List<Stopper> allStoppers = list(new LambdaQueryWrapper<Stopper>()
+                .eq(Stopper::getStatus, 1)
+                .eq(Stopper::getDeleted, 0)
+                .orderByAsc(Stopper::getAdaptEquipment, Stopper::getStopperNo));
+
+        List<Long> stopperIds = allStoppers.stream()
+                .map(Stopper::getId)
+                .collect(Collectors.toList());
+
+        Map<Long, LocalDateTime> lastShiftTimeMap = new HashMap<>();
+        if (!stopperIds.isEmpty()) {
+            List<StopperShift> allShifts = shiftService.list(new LambdaQueryWrapper<StopperShift>()
+                    .eq(StopperShift::getDeleted, 0)
+                    .in(StopperShift::getStopperId, stopperIds)
+                    .orderByDesc(StopperShift::getShiftTime));
+
+            for (StopperShift shift : allShifts) {
+                lastShiftTimeMap.putIfAbsent(shift.getStopperId(), shift.getShiftTime());
+            }
+        }
+
+        List<StopperEquipmentVO> voList = new ArrayList<>();
+        for (Stopper stopper : allStoppers) {
+            StopperEquipmentVO vo = new StopperEquipmentVO();
+            vo.setId(stopper.getId());
+            vo.setStopperNo(stopper.getStopperNo());
+            vo.setSpec(stopper.getSpec());
+            vo.setAdaptEquipment(stopper.getAdaptEquipment());
+            vo.setStation(stopper.getStation());
+            vo.setLastShiftTime(lastShiftTimeMap.get(stopper.getId()));
+            voList.add(vo);
+        }
+
+        return voList.stream()
+                .collect(Collectors.groupingBy(
+                        vo -> vo.getAdaptEquipment() != null ? vo.getAdaptEquipment() : "未适配设备",
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                ));
     }
 
     public List<Stopper> getByStation(String station) {
