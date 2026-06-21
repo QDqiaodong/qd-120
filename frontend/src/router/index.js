@@ -36,6 +36,12 @@ const routes = [
     meta: { title: '移位登记' }
   },
   {
+    path: '/maintenance',
+    name: 'Maintenance',
+    component: () => import('@/views/MaintenanceList.vue'),
+    meta: { title: '维修周转' }
+  },
+  {
     path: '/inventory',
     name: 'Inventory',
     component: () => import('@/views/InventoryList.vue'),

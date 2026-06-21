@@ -90,6 +90,40 @@
         <el-icon class="empty-icon"><CircleCheck /></el-icon>
       </el-empty>
     </el-card>
+
+    <el-card class="maintenance-history-card" v-if="maintenanceHistory.length > 0">
+      <template #header>
+        <div class="card-header">
+          <span class="card-title">维修周转历史</span>
+          <el-tag type="warning" size="small">{{ maintenanceHistory.length }} 条记录</el-tag>
+        </div>
+      </template>
+      <el-table :data="maintenanceHistory" border stripe>
+        <el-table-column prop="originalStation" label="原工位" width="120" />
+        <el-table-column prop="repairReason" label="维修原因" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="expectedReturnDate" label="预计返回" width="120" />
+        <el-table-column label="状态" width="90">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 1 ? 'warning' : 'success'" size="small">
+              {{ row.status === 1 ? '维修中' : '已完成' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="处理结果" width="110">
+          <template #default="{ row }">
+            <el-tag v-if="row.outcome === 'RETURN'" type="primary" size="small">返回原工位</el-tag>
+            <el-tag v-else-if="row.outcome === 'SCRAP'" type="danger" size="small">转报废</el-tag>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="sendOperator" label="送修人" width="90" />
+        <el-table-column prop="sendTime" label="送修时间" width="170">
+          <template #default="{ row }">
+            {{ formatDate(row.sendTime) }}
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
   </div>
 </template>
 
@@ -98,6 +132,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getStopperById } from '@/api/stopper'
 import { getScrapByStopperId } from '@/api/scrap'
+import { getMaintenanceByStopper } from '@/api/maintenance'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft, Tools, CircleCheck } from '@element-plus/icons-vue'
 import WearLevelLegend from '@/components/WearLevelLegend.vue'
@@ -108,6 +143,7 @@ const router = useRouter()
 const loading = ref(false)
 const stopperInfo = ref(null)
 const scrapHistory = ref([])
+const maintenanceHistory = ref([])
 const wearLegendRef = ref(null)
 
 const latestScrap = computed(() => {
@@ -129,12 +165,14 @@ const loadData = async () => {
 
   loading.value = true
   try {
-    const [stopper, scraps] = await Promise.all([
+    const [stopper, scraps, maintenances] = await Promise.all([
       getStopperById(id),
-      getScrapByStopperId(id)
+      getScrapByStopperId(id),
+      getMaintenanceByStopper(id)
     ])
     stopperInfo.value = stopper
     scrapHistory.value = scraps || []
+    maintenanceHistory.value = maintenances || []
   } catch (error) {
     ElMessage.error('加载数据失败')
   } finally {
@@ -161,7 +199,8 @@ onMounted(() => {
 .header-card,
 .info-card,
 .scrap-history-card,
-.no-scrap-card {
+.no-scrap-card,
+.maintenance-history-card {
   border-radius: 8px;
 }
 

@@ -120,6 +120,32 @@ CREATE TABLE IF NOT EXISTS stopper_scrap (
     KEY idx_scrap_time (scrap_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='挡块报废归档表';
 
+CREATE TABLE IF NOT EXISTS stopper_maintenance (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    stopper_id BIGINT NOT NULL COMMENT '挡块ID',
+    stopper_no VARCHAR(50) DEFAULT NULL COMMENT '挡块编号',
+    spec VARCHAR(100) DEFAULT NULL COMMENT '规格型号',
+    adapt_equipment VARCHAR(200) DEFAULT NULL COMMENT '适配设备',
+    original_station VARCHAR(100) DEFAULT NULL COMMENT '原工位',
+    repair_reason VARCHAR(500) DEFAULT NULL COMMENT '维修原因',
+    expected_return_date DATE DEFAULT NULL COMMENT '预计返回日期',
+    send_time DATETIME DEFAULT NULL COMMENT '送修时间',
+    send_operator VARCHAR(100) DEFAULT NULL COMMENT '送修操作人',
+    status TINYINT DEFAULT 1 COMMENT '状态：1-维修中，2-已完成',
+    complete_time DATETIME DEFAULT NULL COMMENT '完成时间',
+    complete_operator VARCHAR(100) DEFAULT NULL COMMENT '完成操作人',
+    outcome VARCHAR(20) DEFAULT NULL COMMENT '处理结果：RETURN-返回原工位，SCRAP-转报废',
+    return_station VARCHAR(100) DEFAULT NULL COMMENT '返回工位',
+    complete_remark VARCHAR(500) DEFAULT NULL COMMENT '完成备注',
+    remark VARCHAR(500) DEFAULT NULL COMMENT '备注',
+    create_time DATETIME DEFAULT NULL COMMENT '创建时间',
+    deleted TINYINT DEFAULT 0 COMMENT '逻辑删除',
+    PRIMARY KEY (id),
+    KEY idx_stopper_id (stopper_id),
+    KEY idx_status (status),
+    KEY idx_send_time (send_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='挡块维修周转记录表';
+
 INSERT IGNORE INTO stopper (stopper_no, spec, adapt_equipment, station, storage_time, image_url, status, remark, create_time, update_time, deleted) VALUES
 ('STP-001', 'D型-25x30', '全自动组装机A-01', 'A区-工位01', '2024-01-15 09:00:00', '', 1, '标准挡块', '2024-01-15 09:00:00', '2024-01-15 09:00:00', 0),
 ('STP-002', 'D型-25x30', '全自动组装机A-02', 'A区-工位01', '2024-01-15 09:05:00', '', 1, '标准挡块', '2024-01-15 09:05:00', '2024-01-15 09:05:00', 0),

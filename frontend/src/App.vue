@@ -36,6 +36,10 @@
             <el-icon><Switch /></el-icon>
             <span>移位登记</span>
           </el-menu-item>
+          <el-menu-item index="/maintenance">
+            <el-icon><Tools /></el-icon>
+            <span>维修周转</span>
+          </el-menu-item>
           <el-menu-item index="/inventory">
             <el-icon><Tickets /></el-icon>
             <span>月度清点</span>
