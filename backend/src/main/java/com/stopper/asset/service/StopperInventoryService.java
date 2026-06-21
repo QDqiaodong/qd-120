@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.stopper.asset.entity.Stopper;
 import com.stopper.asset.entity.StopperInventory;
 import com.stopper.asset.entity.StopperInventoryDetail;
+import com.stopper.asset.entity.StopperInventoryFreeze;
 import com.stopper.asset.mapper.StopperInventoryMapper;
 import com.stopper.asset.vo.InventoryProgressVO;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +31,9 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
 
     @Autowired
     private StopperInventoryDetailService detailService;
+
+    @Autowired
+    private StopperInventoryFreezeService freezeService;
 
     @Autowired
     private PlatformTransactionManager transactionManager;
@@ -90,6 +94,7 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
 
         save(inventory);
 
+        LocalDateTime freezeTime = LocalDateTime.now();
         for (Stopper stopper : allStoppers) {
             StopperInventoryDetail detail = new StopperInventoryDetail();
             detail.setInventoryId(inventory.getId());
@@ -101,6 +106,18 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
             detail.setCreateTime(LocalDateTime.now());
             detail.setDeleted(0);
             detailService.save(detail);
+
+            StopperInventoryFreeze freeze = new StopperInventoryFreeze();
+            freeze.setInventoryId(inventory.getId());
+            freeze.setStopperId(stopper.getId());
+            freeze.setStopperNo(stopper.getStopperNo());
+            freeze.setSpec(stopper.getSpec());
+            freeze.setStation(stopper.getStation());
+            freeze.setStatus(stopper.getStatus());
+            freeze.setFreezeTime(freezeTime);
+            freeze.setCreateTime(LocalDateTime.now());
+            freeze.setDeleted(0);
+            freezeService.save(freeze);
         }
 
         return inventory;
@@ -195,6 +212,10 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
 
     public List<StopperInventoryDetail> getInventoryDetails(Long inventoryId) {
         return detailService.getByInventoryId(inventoryId);
+    }
+
+    public List<StopperInventoryFreeze> getInventoryFreeze(Long inventoryId) {
+        return freezeService.getByInventoryId(inventoryId);
     }
 
     public InventoryProgressVO getCurrentMonthProgress() {

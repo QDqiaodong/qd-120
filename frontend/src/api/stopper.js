@@ -64,6 +64,14 @@ export function getAllEquipments() {
   })
 }
 
+export function generateStopperNo(spec) {
+  return request({
+    url: '/stopper/generate-no',
+    method: 'get',
+    params: { spec }
+  })
+}
+
 export function addStopper(data) {
   return request({
     url: '/stopper',

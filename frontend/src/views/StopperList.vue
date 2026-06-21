@@ -125,8 +125,28 @@
 
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px" @close="resetForm">
       <el-form :model="stopperForm" :rules="formRules" ref="formRef" label-width="100px">
+        <el-form-item v-if="!isEdit" label="编号方式">
+          <el-radio-group v-model="autoGenerate">
+            <el-radio :label="true">自动编号</el-radio>
+            <el-radio :label="false">手动编号</el-radio>
+          </el-radio-group>
+        </el-form-item>
         <el-form-item label="挡块编号" prop="stopperNo">
-          <el-input v-model="stopperForm.stopperNo" placeholder="请输入挡块编号" />
+          <el-input
+            v-model="stopperForm.stopperNo"
+            placeholder="请输入挡块编号"
+            :disabled="!isEdit && autoGenerate"
+          >
+            <template #append v-if="!isEdit && autoGenerate">
+              <el-button
+                :loading="generatingNo"
+                :disabled="!stopperForm.spec"
+                @click="handleGenerateNo"
+              >
+                生成编号
+              </el-button>
+            </template>
+          </el-input>
         </el-form-item>
         <el-form-item label="规格型号" prop="spec">
           <el-select
@@ -136,6 +156,7 @@
             allow-create
             default-first-option
             style="width: 100%"
+            @change="handleSpecChange"
           >
             <el-option v-for="s in specs" :key="s" :label="s" :value="s" />
           </el-select>
@@ -220,7 +241,8 @@ import {
   getAllSpecs,
   addStopper,
   updateStopper,
-  deleteStopper
+  deleteStopper,
+  generateStopperNo
 } from '@/api/stopper'
 import { getStationNames, ensureStation } from '@/api/station'
 import { addShift } from '@/api/shift'
@@ -251,6 +273,8 @@ const filterForm = reactive({
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增挡块')
 const isEdit = ref(false)
+const autoGenerate = ref(true)
+const generatingNo = ref(false)
 const formRef = ref(null)
 
 const stopperForm = reactive({
@@ -422,6 +446,8 @@ const handleReset = () => {
 const handleAdd = () => {
   isEdit.value = false
   dialogTitle.value = '新增挡块'
+  autoGenerate.value = true
+  stopperForm.stopperNo = ''
   loadFormStations()
   dialogVisible.value = true
 }
@@ -454,11 +480,39 @@ const resetForm = () => {
   stopperForm.station = ''
   stopperForm.imageUrl = ''
   stopperForm.remark = ''
+  autoGenerate.value = true
   formRef.value?.resetFields()
+}
+
+const handleGenerateNo = async () => {
+  if (!stopperForm.spec) {
+    ElMessage.warning('请先选择规格型号')
+    return
+  }
+  generatingNo.value = true
+  try {
+    const no = await generateStopperNo(stopperForm.spec)
+    stopperForm.stopperNo = no
+    ElMessage.success('编号生成成功')
+  } catch (error) {
+    ElMessage.error(error?.message || '编号生成失败')
+  } finally {
+    generatingNo.value = false
+  }
+}
+
+const handleSpecChange = () => {
+  if (!isEdit.value && autoGenerate.value) {
+    stopperForm.stopperNo = ''
+  }
 }
 
 const handleSubmit = async () => {
   if (!formRef.value) return
+  if (!isEdit.value && autoGenerate.value && !stopperForm.stopperNo) {
+    ElMessage.warning('请点击"生成编号"按钮生成挡块编号')
+    return
+  }
   await formRef.value.validate(async (valid) => {
     if (valid) {
       try {
@@ -473,7 +527,11 @@ const handleSubmit = async () => {
           await updateStopper(stopperForm)
           ElMessage.success('更新成功')
         } else {
-          await addStopper(stopperForm)
+          const submitData = {
+            ...stopperForm,
+            autoGenerate: autoGenerate.value
+          }
+          await addStopper(submitData)
           ElMessage.success('添加成功')
         }
         dialogVisible.value = false

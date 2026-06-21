@@ -103,6 +103,24 @@ CREATE TABLE IF NOT EXISTS stopper_inventory_detail (
     KEY idx_station (station)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='挡块盘点明细表';
 
+CREATE TABLE IF NOT EXISTS stopper_inventory_freeze (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    inventory_id BIGINT NOT NULL COMMENT '盘点单ID',
+    stopper_id BIGINT NOT NULL COMMENT '挡块ID',
+    stopper_no VARCHAR(50) DEFAULT NULL COMMENT '挡块编号（冻结快照）',
+    spec VARCHAR(100) DEFAULT NULL COMMENT '规格型号（冻结快照）',
+    station VARCHAR(100) DEFAULT NULL COMMENT '存放工位（冻结快照）',
+    status TINYINT DEFAULT NULL COMMENT '状态（冻结快照）：1-正常，2-报废',
+    freeze_time DATETIME DEFAULT NULL COMMENT '冻结时间',
+    create_time DATETIME DEFAULT NULL COMMENT '创建时间',
+    deleted TINYINT DEFAULT 0 COMMENT '逻辑删除',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_inventory_stopper (inventory_id, stopper_id),
+    KEY idx_inventory_id (inventory_id),
+    KEY idx_stopper_id (stopper_id),
+    KEY idx_stopper_no (stopper_no)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='挡块月度清点冻结快照表';
+
 CREATE TABLE IF NOT EXISTS stopper_scrap (
     id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     stopper_id BIGINT NOT NULL COMMENT '挡块ID',

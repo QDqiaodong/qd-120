@@ -132,8 +132,54 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
         return count(wrapper) > 0;
     }
 
+    public String generateStopperNo(String spec) {
+        if (spec == null || spec.trim().isEmpty()) {
+            throw new RuntimeException("规格不能为空");
+        }
+        String year = String.valueOf(LocalDateTime.now().getYear());
+        String specPrefix = extractSpecPrefix(spec);
+        String lastNo = baseMapper.selectLastStopperNoByYearAndPrefix(year, specPrefix);
+        int nextSeq = 1;
+        if (lastNo != null && !lastNo.isEmpty()) {
+            int prefixLength = year.length() + specPrefix.length();
+            if (lastNo.length() > prefixLength) {
+                try {
+                    String seqStr = lastNo.substring(prefixLength);
+                    nextSeq = Integer.parseInt(seqStr) + 1;
+                } catch (NumberFormatException e) {
+                    nextSeq = 1;
+                }
+            }
+        }
+        if (nextSeq > 999) {
+            throw new RuntimeException("该年份+规格下的编号已超过最大值(999)");
+        }
+        return year + specPrefix + String.format("%03d", nextSeq);
+    }
+
+    private String extractSpecPrefix(String spec) {
+        if (spec == null) {
+            return "X";
+        }
+        int idx = spec.indexOf("型");
+        if (idx > 0) {
+            return spec.substring(0, idx).toUpperCase();
+        }
+        if (!spec.isEmpty()) {
+            return String.valueOf(spec.charAt(0)).toUpperCase();
+        }
+        return "X";
+    }
+
     @Transactional(rollbackFor = Exception.class)
-    public boolean addStopper(Stopper stopper) {
+    public boolean addStopper(Stopper stopper, boolean autoGenerate) {
+        if (autoGenerate) {
+            String generatedNo = generateStopperNo(stopper.getSpec());
+            stopper.setStopperNo(generatedNo);
+        }
+        if (stopper.getStopperNo() == null || stopper.getStopperNo().trim().isEmpty()) {
+            throw new RuntimeException("挡块编号不能为空");
+        }
         if (existsByStopperNo(stopper.getStopperNo(), null)) {
             return false;
         }
@@ -148,6 +194,11 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
             evictSpecsCache();
         }
         return result;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public boolean addStopper(Stopper stopper) {
+        return addStopper(stopper, false);
     }
 
     @Transactional(rollbackFor = Exception.class)

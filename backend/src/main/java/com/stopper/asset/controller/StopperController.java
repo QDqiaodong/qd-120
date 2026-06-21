@@ -93,12 +93,47 @@ public class StopperController {
         return Result.success(stopperService.getAllEquipments());
     }
 
+    @GetMapping("/generate-no")
+    public Result<String> generateNo(@RequestParam String spec) {
+        try {
+            String no = stopperService.generateStopperNo(spec);
+            return Result.success(no);
+        } catch (RuntimeException e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
     @PostMapping
-    public Result<String> add(@RequestBody Stopper stopper) {
-        if (stopperService.existsByStopperNo(stopper.getStopperNo(), null)) {
+    public Result<String> add(@RequestBody Map<String, Object> params) {
+        Boolean autoGenerate = params.get("autoGenerate") != null ? (Boolean) params.get("autoGenerate") : false;
+        Stopper stopper = new Stopper();
+        if (params.get("id") != null) {
+            stopper.setId(Long.valueOf(params.get("id").toString()));
+        }
+        stopper.setStopperNo(params.get("stopperNo") != null ? params.get("stopperNo").toString() : null);
+        stopper.setSpec(params.get("spec") != null ? params.get("spec").toString() : null);
+        stopper.setAdaptEquipment(params.get("adaptEquipment") != null ? params.get("adaptEquipment").toString() : null);
+        stopper.setStation(params.get("station") != null ? params.get("station").toString() : null);
+        stopper.setImageUrl(params.get("imageUrl") != null ? params.get("imageUrl").toString() : null);
+        stopper.setRemark(params.get("remark") != null ? params.get("remark").toString() : null);
+        if (!autoGenerate && (stopper.getStopperNo() == null || stopper.getStopperNo().trim().isEmpty())) {
+            return Result.validationError("stopperNo", "挡块编号不能为空");
+        }
+        if (stopper.getSpec() == null || stopper.getSpec().trim().isEmpty()) {
+            return Result.validationError("spec", "规格型号不能为空");
+        }
+        if (stopper.getStation() == null || stopper.getStation().trim().isEmpty()) {
+            return Result.validationError("station", "存放工位不能为空");
+        }
+        if (!autoGenerate && stopperService.existsByStopperNo(stopper.getStopperNo(), null)) {
             return Result.validationError("stopperNo", "挡块编号已存在");
         }
-        boolean result = stopperService.addStopper(stopper);
+        boolean result;
+        try {
+            result = stopperService.addStopper(stopper, autoGenerate);
+        } catch (RuntimeException e) {
+            return Result.error(e.getMessage());
+        }
         return result ? Result.success("添加成功") : Result.error("添加失败");
     }
 

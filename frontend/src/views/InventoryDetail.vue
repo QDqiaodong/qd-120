@@ -48,6 +48,16 @@
         <div class="card-header">
           <span>挡块盘点明细</span>
           <div class="header-actions">
+            <el-tag v-if="freezeTime" type="info" size="large">
+              <el-icon><Clock /></el-icon>
+              冻结基准时间: {{ formatDate(freezeTime) }}
+            </el-tag>
+            <el-switch
+              v-model="showFreezeSnapshot"
+              active-text="对比冻结快照"
+              inactive-text="仅显示当前"
+              size="large"
+            />
             <el-switch
               v-model="showOnlyUnprocessed"
               active-text="只看未处理差异"
@@ -66,9 +76,43 @@
       </template>
 
       <el-table :data="filteredList" v-loading="loading" border stripe>
-        <el-table-column prop="stopperNo" label="挡块编号" width="130" />
-        <el-table-column prop="spec" label="规格型号" width="130" />
-        <el-table-column prop="station" label="存放工位" width="130" />
+        <el-table-column prop="stopperNo" label="挡块编号" width="130">
+          <template #default="{ row }">
+            <span v-if="row.stopperNoChanged && showFreezeSnapshot" class="changed-value" :title="'冻结值: ' + row.freezeStopperNo">
+              {{ row.stopperNo }}
+              <el-icon class="change-icon"><WarningFilled /></el-icon>
+            </span>
+            <span v-else>{{ row.stopperNo }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="spec" label="规格型号" width="130">
+          <template #default="{ row }">
+            <span v-if="row.specChanged && showFreezeSnapshot" class="changed-value" :title="'冻结值: ' + row.freezeSpec">
+              {{ row.spec }}
+              <el-icon class="change-icon"><WarningFilled /></el-icon>
+            </span>
+            <span v-else>{{ row.spec }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column v-if="showFreezeSnapshot" prop="freezeSpec" label="冻结规格" width="130">
+          <template #default="{ row }">
+            <span class="freeze-value">{{ row.freezeSpec }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="station" label="当前工位" width="130">
+          <template #default="{ row }">
+            <span v-if="row.stationChanged && showFreezeSnapshot" class="changed-value" :title="'冻结值: ' + row.freezeStation">
+              {{ row.station }}
+              <el-icon class="change-icon"><WarningFilled /></el-icon>
+            </span>
+            <span v-else>{{ row.station }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column v-if="showFreezeSnapshot" prop="freezeStation" label="冻结工位" width="130">
+          <template #default="{ row }">
+            <span class="freeze-value">{{ row.freezeStation }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="盘点状态" width="120">
           <template #default="{ row }">
             <el-tag v-if="row.inventoryStatus === 1" type="success" size="small">已盘</el-tag>
@@ -114,7 +158,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getInventoryById, getInventoryDetail, markInventoryItem, completeInventory } from '@/api/inventory'
+import { getInventoryById, getInventoryDetail, getInventoryFreeze, markInventoryItem, completeInventory } from '@/api/inventory'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const route = useRoute()
@@ -123,7 +167,10 @@ const router = useRouter()
 const loading = ref(false)
 const inventoryInfo = ref(null)
 const detailList = ref([])
+const freezeList = ref([])
+const freezeTime = ref(null)
 const showOnlyUnprocessed = ref(false)
+const showFreezeSnapshot = ref(false)
 
 const pendingCount = computed(() => {
   return detailList.value.filter((item) => {
@@ -140,11 +187,36 @@ const unprocessedCount = computed(() => {
 })
 
 const filteredList = computed(() => {
+  const sourceList = showFreezeSnapshot.value ? combinedList.value : detailList.value
   if (!showOnlyUnprocessed.value) {
-    return detailList.value
+    return sourceList
   }
-  return detailList.value.filter((item) => {
+  return sourceList.filter((item) => {
     return item.inventoryStatus !== 1
+  })
+})
+
+const freezeMap = computed(() => {
+  const map = new Map()
+  freezeList.value.forEach((f) => {
+    map.set(f.stopperId, f)
+  })
+  return map
+})
+
+const combinedList = computed(() => {
+  return detailList.value.map((d) => {
+    const freeze = freezeMap.value.get(d.stopperId)
+    return {
+      ...d,
+      freezeStation: freeze?.station || '-',
+      freezeSpec: freeze?.spec || '-',
+      freezeStopperNo: freeze?.stopperNo || '-',
+      freezeStatus: freeze?.status,
+      stationChanged: freeze && d.station !== freeze.station,
+      specChanged: freeze && d.spec !== freeze.spec,
+      stopperNoChanged: freeze && d.stopperNo !== freeze.stopperNo
+    }
   })
 })
 
@@ -161,10 +233,17 @@ const loadData = async () => {
 
   loading.value = true
   try {
-    const details = await getInventoryDetail(id)
+    const [details, info, freezes] = await Promise.all([
+      getInventoryDetail(id),
+      getInventoryById(id),
+      getInventoryFreeze(id)
+    ])
     detailList.value = details
-    const info = await getInventoryById(id)
     inventoryInfo.value = info
+    freezeList.value = freezes
+    if (freezes && freezes.length > 0) {
+      freezeTime.value = freezes[0].freezeTime
+    }
   } catch (error) {
     ElMessage.error('加载数据失败')
   } finally {
@@ -336,5 +415,27 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.changed-value {
+  color: #e6a23c;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.change-icon {
+  font-size: 12px;
+  color: #e6a23c;
+}
+
+.freeze-value {
+  color: #909399;
+  font-style: italic;
+  background: #f5f7fa;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 12px;
 }
 </style>

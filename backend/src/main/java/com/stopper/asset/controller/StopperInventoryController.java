@@ -3,6 +3,7 @@ package com.stopper.asset.controller;
 import com.stopper.asset.common.Result;
 import com.stopper.asset.entity.StopperInventory;
 import com.stopper.asset.entity.StopperInventoryDetail;
+import com.stopper.asset.entity.StopperInventoryFreeze;
 import com.stopper.asset.service.StopperInventoryService;
 import com.stopper.asset.vo.InventoryProgressVO;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,11 @@ public class StopperInventoryController {
     @GetMapping("/detail/{inventoryId}")
     public Result<List<StopperInventoryDetail>> getDetails(@PathVariable Long inventoryId) {
         return Result.success(inventoryService.getInventoryDetails(inventoryId));
+    }
+
+    @GetMapping("/freeze/{inventoryId}")
+    public Result<List<StopperInventoryFreeze>> getFreeze(@PathVariable Long inventoryId) {
+        return Result.success(inventoryService.getInventoryFreeze(inventoryId));
     }
 
     @PostMapping("/start")

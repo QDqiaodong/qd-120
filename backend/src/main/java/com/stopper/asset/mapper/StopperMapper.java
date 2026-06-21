@@ -22,4 +22,7 @@ public interface StopperMapper extends BaseMapper<Stopper> {
 
     @Select("SELECT * FROM stopper WHERE deleted = 0 AND station = #{station} ORDER BY stopper_no")
     List<Stopper> selectByStation(@Param("station") String station);
+
+    @Select("SELECT stopper_no FROM stopper WHERE deleted = 0 AND stopper_no LIKE CONCAT(#{year}, #{specPrefix}, '%') ORDER BY stopper_no DESC LIMIT 1")
+    String selectLastStopperNoByYearAndPrefix(@Param("year") String year, @Param("specPrefix") String specPrefix);
 }

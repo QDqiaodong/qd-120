@@ -21,6 +21,13 @@ export function getInventoryDetail(inventoryId) {
   })
 }
 
+export function getInventoryFreeze(inventoryId) {
+  return request({
+    url: `/inventory/freeze/${inventoryId}`,
+    method: 'get'
+  })
+}
+
 export function startInventory(data) {
   return request({
     url: '/inventory/start',
