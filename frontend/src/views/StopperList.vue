@@ -31,6 +31,21 @@
             <el-option v-for="s in filterStations" :key="s" :label="s" :value="s" />
           </el-select>
         </el-form-item>
+        <el-form-item label="适配设备">
+          <el-select
+            v-model="filterForm.equipment"
+            placeholder="全部设备"
+            clearable
+            filterable
+            remote
+            reserve-keyword
+            :remote-method="remoteSearchEquipment"
+            :loading="equipmentLoading"
+            style="width: 180px"
+          >
+            <el-option v-for="e in equipments" :key="e" :label="e" :value="e" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="filterForm.status" placeholder="全部状态" clearable style="width: 120px">
             <el-option label="正常" :value="1" />
@@ -239,6 +254,7 @@ import {
   getStopperPage,
   getAllStations as getStopperStations,
   getAllSpecs,
+  getAllEquipments,
   addStopper,
   updateStopper,
   deleteStopper,
@@ -258,6 +274,8 @@ const pageSize = ref(10)
 const specs = ref([])
 const filterStations = ref([])
 const stationLoading = ref(false)
+const equipments = ref([])
+const equipmentLoading = ref(false)
 const formStations = ref([])
 const formStationLoading = ref(false)
 const shiftStations = ref([])
@@ -267,6 +285,7 @@ const filterForm = reactive({
   keyword: '',
   spec: '',
   station: '',
+  equipment: '',
   status: ''
 })
 
@@ -338,6 +357,7 @@ const loadData = async () => {
       keyword: filterForm.keyword || undefined,
       spec: filterForm.spec || undefined,
       station: filterForm.station || undefined,
+      equipment: filterForm.equipment || undefined,
       status: filterForm.status !== '' ? filterForm.status : undefined
     })
     tableData.value = data.records || []
@@ -429,6 +449,30 @@ const remoteSearchStationShift = async (query) => {
   }
 }
 
+const loadEquipments = async () => {
+  try {
+    equipments.value = await getAllEquipments()
+  } catch (error) {
+    console.error('加载设备列表失败')
+  }
+}
+
+const remoteSearchEquipment = async (query) => {
+  equipmentLoading.value = true
+  try {
+    const allEquipments = await getAllEquipments()
+    if (query) {
+      equipments.value = allEquipments.filter(e => e && e.toLowerCase().includes(query.toLowerCase()))
+    } else {
+      equipments.value = allEquipments
+    }
+  } catch (error) {
+    console.error('搜索设备失败')
+  } finally {
+    equipmentLoading.value = false
+  }
+}
+
 const handleSearch = () => {
   pageNum.value = 1
   loadData()
@@ -438,6 +482,7 @@ const handleReset = () => {
   filterForm.keyword = ''
   filterForm.spec = ''
   filterForm.station = ''
+  filterForm.equipment = ''
   filterForm.status = ''
   pageNum.value = 1
   loadData()
@@ -542,9 +587,14 @@ const handleSubmit = async () => {
         if (error.fieldErrors) {
           const fields = []
           Object.keys(error.fieldErrors).forEach(field => {
+            let message = error.fieldErrors[field]
+            if (field === 'stopperNo' && error.data) {
+              const statusText = error.data.status === 1 ? '正常' : '报废'
+              message = `${message}，已存在挡块：规格 ${error.data.spec || '-'}，工位 ${error.data.station || '-'}，状态 ${statusText}`
+            }
             fields.push({
               field: field,
-              message: error.fieldErrors[field]
+              message: message
             })
           })
           formRef.value.setFields(fields)
@@ -641,6 +691,7 @@ onMounted(() => {
   loadData()
   loadSpecs()
   loadFilterStations()
+  loadEquipments()
 })
 </script>
 

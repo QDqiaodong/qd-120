@@ -18,6 +18,7 @@ request.interceptors.response.use(
       const error = new Error(res.message || '请求失败')
       error.fieldErrors = res.fieldErrors || null
       error.code = res.code
+      error.data = res.data || null
       return Promise.reject(error)
     }
   },

@@ -58,4 +58,15 @@ public class Result<T> {
         result.setFieldErrors(errors);
         return result;
     }
+
+    public static <T> Result<T> validationError(String field, String message, T data) {
+        Result<T> result = new Result<>();
+        result.setCode(400);
+        result.setMessage("参数校验失败");
+        Map<String, String> errors = new HashMap<>();
+        errors.put(field, message);
+        result.setFieldErrors(errors);
+        result.setData(data);
+        return result;
+    }
 }
