@@ -139,7 +139,16 @@ public class StopperController {
 
     @PutMapping
     public Result<String> update(@RequestBody Stopper stopper) {
-        if (stopperService.existsByStopperNo(stopper.getStopperNo(), stopper.getId())) {
+        if (stopper.getStopperNo() == null || stopper.getStopperNo().trim().isEmpty()) {
+            return Result.validationError("stopperNo", "挡块编号不能为空");
+        }
+        if (stopper.getSpec() == null || stopper.getSpec().trim().isEmpty()) {
+            return Result.validationError("spec", "规格型号不能为空");
+        }
+        if (stopper.getStation() == null || stopper.getStation().trim().isEmpty()) {
+            return Result.validationError("station", "存放工位不能为空");
+        }
+        if (stopperService.existsByStopperNo(stopper.getStopperNo().trim(), stopper.getId())) {
             return Result.validationError("stopperNo", "挡块编号已存在");
         }
         boolean result = stopperService.updateStopper(stopper);
@@ -148,7 +157,11 @@ public class StopperController {
 
     @DeleteMapping("/{id}")
     public Result<String> delete(@PathVariable Long id) {
-        boolean result = stopperService.deleteStopper(id);
-        return result ? Result.success("删除成功") : Result.error("删除失败");
+        try {
+            boolean result = stopperService.deleteStopper(id);
+            return result ? Result.success("删除成功") : Result.error("删除失败");
+        } catch (RuntimeException e) {
+            return Result.error(e.getMessage());
+        }
     }
 }
