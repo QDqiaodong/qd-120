@@ -151,6 +151,7 @@
             v-model="stopperForm.stopperNo"
             placeholder="请输入挡块编号"
             :disabled="!isEdit && autoGenerate"
+            @input="clearServerFieldError('stopperNo')"
           >
             <template #append v-if="!isEdit && autoGenerate">
               <el-button
@@ -191,6 +192,7 @@
             :remote-method="remoteSearchStationForm"
             :loading="formStationLoading"
             style="width: 100%"
+            @change="clearServerFieldError('station')"
           >
             <el-option v-for="s in formStations" :key="s" :label="s" :value="s" />
           </el-select>
@@ -248,7 +250,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   getStopperPage,
@@ -306,10 +308,30 @@ const stopperForm = reactive({
   remark: ''
 })
 
+const serverFieldErrors = reactive({
+  stopperNo: '',
+  spec: '',
+  station: ''
+})
+
+const createFieldValidator = (field, requiredMessage) => {
+  return (rule, value, callback) => {
+    if (value === undefined || value === null || String(value).trim() === '') {
+      callback(new Error(requiredMessage))
+      return
+    }
+    if (serverFieldErrors[field]) {
+      callback(new Error(serverFieldErrors[field]))
+      return
+    }
+    callback()
+  }
+}
+
 const formRules = {
-  stopperNo: [{ required: true, message: '请输入挡块编号', trigger: 'blur' }],
-  spec: [{ required: true, message: '请输入规格型号', trigger: 'blur' }],
-  station: [{ required: true, message: '请输入存放工位', trigger: 'blur' }]
+  stopperNo: [{ validator: createFieldValidator('stopperNo', '请输入挡块编号'), trigger: 'blur' }],
+  spec: [{ validator: createFieldValidator('spec', '请输入规格型号'), trigger: 'blur' }],
+  station: [{ validator: createFieldValidator('station', '请输入存放工位'), trigger: 'blur' }]
 }
 
 const shiftDialogVisible = ref(false)
@@ -492,6 +514,7 @@ const handleAdd = () => {
   isEdit.value = false
   dialogTitle.value = '新增挡块'
   autoGenerate.value = true
+  clearAllServerFieldErrors()
   stopperForm.stopperNo = ''
   loadFormStations()
   dialogVisible.value = true
@@ -500,6 +523,7 @@ const handleAdd = () => {
 const handleEdit = (row) => {
   isEdit.value = true
   dialogTitle.value = '编辑挡块'
+  clearAllServerFieldErrors()
   Object.assign(stopperForm, {
     id: row.id,
     stopperNo: row.stopperNo,
@@ -518,6 +542,7 @@ const handleView = (row) => {
 }
 
 const resetForm = () => {
+  clearAllServerFieldErrors()
   stopperForm.id = null
   stopperForm.stopperNo = ''
   stopperForm.spec = ''
@@ -547,9 +572,24 @@ const handleGenerateNo = async () => {
 }
 
 const handleSpecChange = () => {
+  clearServerFieldError('spec')
   if (!isEdit.value && autoGenerate.value) {
     stopperForm.stopperNo = ''
+    clearServerFieldError('stopperNo')
   }
+}
+
+const clearServerFieldError = (field) => {
+  if (serverFieldErrors[field]) {
+    serverFieldErrors[field] = ''
+    formRef.value?.clearValidate?.([field])
+  }
+}
+
+const clearAllServerFieldErrors = () => {
+  Object.keys(serverFieldErrors).forEach((field) => {
+    serverFieldErrors[field] = ''
+  })
 }
 
 const handleSubmit = async () => {
@@ -585,19 +625,26 @@ const handleSubmit = async () => {
         loadFilterStations()
       } catch (error) {
         if (error.fieldErrors) {
-          const fields = []
+          clearAllServerFieldErrors()
+          const fieldNames = []
+          let firstMessage = ''
           Object.keys(error.fieldErrors).forEach(field => {
             let message = error.fieldErrors[field]
             if (field === 'stopperNo' && error.data) {
               const statusText = error.data.status === 1 ? '正常' : '报废'
               message = `${message}，已存在挡块：规格 ${error.data.spec || '-'}，工位 ${error.data.station || '-'}，状态 ${statusText}`
             }
-            fields.push({
-              field: field,
-              message: message
-            })
+            if (Object.prototype.hasOwnProperty.call(serverFieldErrors, field)) {
+              serverFieldErrors[field] = message
+            }
+            if (!firstMessage) {
+              firstMessage = message
+            }
+            fieldNames.push(field)
           })
-          formRef.value.setFields(fields)
+          await nextTick()
+          formRef.value?.validateField?.(fieldNames).catch(() => {})
+          ElMessage.error(firstMessage)
         } else {
           ElMessage.error(isEdit.value ? '更新失败' : '添加失败')
         }
