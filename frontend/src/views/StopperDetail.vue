@@ -81,7 +81,25 @@
             {{ formatDate(row.scrapTime) }}
           </template>
         </el-table-column>
-        <el-table-column prop="remark" label="备注" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="remark" label="备注" min-width="150">
+          <template #default="{ row }">
+            <el-popover
+              v-if="row.remark && row.remark.length > 15"
+              placement="top"
+              trigger="hover"
+              :width="320"
+            >
+              <template #reference>
+                <span class="remark-text remark-ellipsis">{{ row.remark }}</span>
+              </template>
+              <div class="remark-popover-content">
+                <div class="popover-title">备注详情</div>
+                <div class="popover-text">{{ row.remark }}</div>
+              </div>
+            </el-popover>
+            <span v-else class="remark-text">{{ row.remark || '-' }}</span>
+          </template>
+        </el-table-column>
       </el-table>
     </el-card>
 
@@ -277,6 +295,41 @@ onMounted(() => {
   border-radius: 50%;
   margin-right: 6px;
   vertical-align: middle;
+}
+
+.remark-text {
+  display: inline-block;
+  vertical-align: middle;
+  color: #606266;
+  font-size: 13px;
+}
+
+.remark-ellipsis {
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: help;
+}
+
+.remark-popover-content {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.remark-popover-content .popover-title {
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #ebeef5;
+  font-size: 14px;
+}
+
+.remark-popover-content .popover-text {
+  color: #606266;
+  word-break: break-all;
+  white-space: pre-wrap;
 }
 
 .empty-icon {

@@ -59,13 +59,13 @@ const wearLevels = [
   {
     value: '断裂',
     label: '断裂损坏',
-    color: '#909399',
+    color: '#d9001b',
     description: '已断裂或完全损坏，无法继续使用'
   },
   {
     value: '完全损坏',
     label: '完全损坏',
-    color: '#909399',
+    color: '#b30000',
     description: '已完全损坏，无法继续使用'
   }
 ]
@@ -80,8 +80,8 @@ const getWearLevelTagType = (level) => {
     '轻微': 'success',
     '中度': 'warning',
     '严重': 'danger',
-    '断裂': 'info',
-    '完全损坏': 'info'
+    '断裂': 'danger',
+    '完全损坏': 'danger'
   }
   return colorMap[level] || 'info'
 }
