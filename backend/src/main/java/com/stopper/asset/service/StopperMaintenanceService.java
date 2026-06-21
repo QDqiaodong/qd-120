@@ -15,8 +15,6 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 public class StopperMaintenanceService extends ServiceImpl<StopperMaintenanceMapper, StopperMaintenance> {
@@ -144,29 +142,20 @@ public class StopperMaintenanceService extends ServiceImpl<StopperMaintenanceMap
     }
 
     public List<StopperMaintenance> getAllMaintenance() {
-        List<StopperMaintenance> list = list(new LambdaQueryWrapper<StopperMaintenance>()
+        return list(new LambdaQueryWrapper<StopperMaintenance>()
                 .eq(StopperMaintenance::getDeleted, 0)
                 .orderByDesc(StopperMaintenance::getSendTime));
-        return filterByStopperExists(list);
     }
 
     public List<StopperMaintenance> getActiveMaintenance() {
-        List<StopperMaintenance> list = list(new LambdaQueryWrapper<StopperMaintenance>()
+        return list(new LambdaQueryWrapper<StopperMaintenance>()
                 .eq(StopperMaintenance::getDeleted, 0)
                 .eq(StopperMaintenance::getStatus, STATUS_IN_REPAIR)
                 .orderByDesc(StopperMaintenance::getSendTime));
-        return filterByStopperExists(list);
     }
 
     public StopperMaintenance getMaintenanceById(Long id) {
-        StopperMaintenance maintenance = getById(id);
-        if (maintenance == null) {
-            return null;
-        }
-        Stopper stopper = stopperService.getOne(new LambdaQueryWrapper<Stopper>()
-                .eq(Stopper::getId, maintenance.getStopperId())
-                .eq(Stopper::getDeleted, 0));
-        return stopper != null ? maintenance : null;
+        return getById(id);
     }
 
     public List<StopperMaintenance> getMaintenanceByStopperId(Long stopperId) {
@@ -174,24 +163,5 @@ public class StopperMaintenanceService extends ServiceImpl<StopperMaintenanceMap
                 .eq(StopperMaintenance::getStopperId, stopperId)
                 .eq(StopperMaintenance::getDeleted, 0)
                 .orderByDesc(StopperMaintenance::getSendTime));
-    }
-
-    private List<StopperMaintenance> filterByStopperExists(List<StopperMaintenance> list) {
-        if (list == null || list.isEmpty()) {
-            return list;
-        }
-        List<Long> stopperIds = list.stream()
-                .map(StopperMaintenance::getStopperId)
-                .distinct()
-                .collect(Collectors.toList());
-        List<Stopper> existingStoppers = stopperService.list(new LambdaQueryWrapper<Stopper>()
-                .in(Stopper::getId, stopperIds)
-                .eq(Stopper::getDeleted, 0));
-        Set<Long> existingIds = existingStoppers.stream()
-                .map(Stopper::getId)
-                .collect(Collectors.toSet());
-        return list.stream()
-                .filter(m -> existingIds.contains(m.getStopperId()))
-                .collect(Collectors.toList());
     }
 }

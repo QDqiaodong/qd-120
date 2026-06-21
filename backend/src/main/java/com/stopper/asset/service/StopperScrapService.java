@@ -11,8 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 public class StopperScrapService extends ServiceImpl<StopperScrapMapper, StopperScrap> {
@@ -57,40 +55,13 @@ public class StopperScrapService extends ServiceImpl<StopperScrapMapper, Stopper
     }
 
     public List<StopperScrap> getAllScraps() {
-        List<StopperScrap> scraps = list(new LambdaQueryWrapper<StopperScrap>()
+        return list(new LambdaQueryWrapper<StopperScrap>()
                 .eq(StopperScrap::getDeleted, 0)
                 .orderByDesc(StopperScrap::getScrapTime));
-        return filterByStopperExists(scraps);
     }
 
     public StopperScrap getScrapById(Long id) {
-        StopperScrap scrap = getById(id);
-        if (scrap == null) {
-            return null;
-        }
-        Stopper stopper = stopperService.getOne(new LambdaQueryWrapper<Stopper>()
-                .eq(Stopper::getId, scrap.getStopperId())
-                .eq(Stopper::getDeleted, 0));
-        return stopper != null ? scrap : null;
-    }
-
-    private List<StopperScrap> filterByStopperExists(List<StopperScrap> scraps) {
-        if (scraps == null || scraps.isEmpty()) {
-            return scraps;
-        }
-        List<Long> stopperIds = scraps.stream()
-                .map(StopperScrap::getStopperId)
-                .distinct()
-                .collect(Collectors.toList());
-        List<Stopper> existingStoppers = stopperService.list(new LambdaQueryWrapper<Stopper>()
-                .in(Stopper::getId, stopperIds)
-                .eq(Stopper::getDeleted, 0));
-        Set<Long> existingIds = existingStoppers.stream()
-                .map(Stopper::getId)
-                .collect(Collectors.toSet());
-        return scraps.stream()
-                .filter(s -> existingIds.contains(s.getStopperId()))
-                .collect(Collectors.toList());
+        return getById(id);
     }
 
     public List<StopperScrap> getScrapsByStopperId(Long stopperId) {

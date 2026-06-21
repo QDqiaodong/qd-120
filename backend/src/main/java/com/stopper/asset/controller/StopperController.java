@@ -23,6 +23,7 @@ public class StopperController {
     public Result<List<Stopper>> list() {
         return Result.success(stopperService.list(new LambdaQueryWrapper<Stopper>()
                 .eq(Stopper::getDeleted, 0)
+                .eq(Stopper::getStatus, 1)
                 .orderByAsc(Stopper::getStopperNo)));
     }
 

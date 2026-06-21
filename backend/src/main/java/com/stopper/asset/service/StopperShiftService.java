@@ -14,8 +14,6 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 public class StopperShiftService extends ServiceImpl<StopperShiftMapper, StopperShift> {
@@ -75,36 +73,15 @@ public class StopperShiftService extends ServiceImpl<StopperShiftMapper, Stopper
     }
 
     public List<StopperShift> getShiftList(Long stopperId) {
-        List<StopperShift> shifts = getBaseMapper().selectList(new LambdaQueryWrapper<StopperShift>()
+        return getBaseMapper().selectList(new LambdaQueryWrapper<StopperShift>()
                 .eq(StopperShift::getDeleted, 0)
                 .eq(stopperId != null, StopperShift::getStopperId, stopperId)
                 .orderByDesc(StopperShift::getShiftTime));
-        return filterByStopperExists(shifts);
     }
 
     public List<StopperShift> getAllShifts() {
-        List<StopperShift> shifts = list(new LambdaQueryWrapper<StopperShift>()
+        return list(new LambdaQueryWrapper<StopperShift>()
                 .eq(StopperShift::getDeleted, 0)
                 .orderByDesc(StopperShift::getShiftTime));
-        return filterByStopperExists(shifts);
-    }
-
-    private List<StopperShift> filterByStopperExists(List<StopperShift> shifts) {
-        if (shifts == null || shifts.isEmpty()) {
-            return shifts;
-        }
-        List<Long> stopperIds = shifts.stream()
-                .map(StopperShift::getStopperId)
-                .distinct()
-                .collect(Collectors.toList());
-        List<Stopper> existingStoppers = stopperService.list(new LambdaQueryWrapper<Stopper>()
-                .in(Stopper::getId, stopperIds)
-                .eq(Stopper::getDeleted, 0));
-        Set<Long> existingIds = existingStoppers.stream()
-                .map(Stopper::getId)
-                .collect(Collectors.toSet());
-        return shifts.stream()
-                .filter(s -> existingIds.contains(s.getStopperId()))
-                .collect(Collectors.toList());
     }
 }
