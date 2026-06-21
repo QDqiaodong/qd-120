@@ -5,17 +5,9 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.stopper.asset.entity.Stopper;
 import com.stopper.asset.entity.StopperShift;
 import com.stopper.asset.entity.StopperStation;
-import com.stopper.asset.entity.StopperScrap;
-import com.stopper.asset.entity.StopperMaintenance;
-import com.stopper.asset.entity.StopperInventoryDetail;
-import com.stopper.asset.entity.StopperInventoryFreeze;
 import com.stopper.asset.mapper.StopperMapper;
 import com.stopper.asset.mapper.StopperShiftMapper;
 import com.stopper.asset.mapper.StopperStationMapper;
-import com.stopper.asset.mapper.StopperScrapMapper;
-import com.stopper.asset.mapper.StopperMaintenanceMapper;
-import com.stopper.asset.mapper.StopperInventoryDetailMapper;
-import com.stopper.asset.mapper.StopperInventoryFreezeMapper;
 import com.stopper.asset.vo.StopperEquipmentVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -42,18 +34,6 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
 
     @Autowired
     private StopperStationMapper stopperStationMapper;
-
-    @Autowired
-    private StopperScrapMapper stopperScrapMapper;
-
-    @Autowired
-    private StopperMaintenanceMapper stopperMaintenanceMapper;
-
-    @Autowired
-    private StopperInventoryDetailMapper stopperInventoryDetailMapper;
-
-    @Autowired
-    private StopperInventoryFreezeMapper stopperInventoryFreezeMapper;
 
     private static final String SPECS_CACHE_KEY = "stopper:specs";
     private static final long SPECS_CACHE_EXPIRE = 24;
@@ -314,47 +294,14 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
         return null;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean deleteStopper(Long id) {
-        long shiftCount = stopperShiftMapper.selectCount(new LambdaQueryWrapper<StopperShift>()
-                .eq(StopperShift::getStopperId, id)
-                .eq(StopperShift::getDeleted, 0));
-        if (shiftCount > 0) {
-            throw new RuntimeException("该挡块存在移位记录，无法删除");
-        }
-
-        long scrapCount = stopperScrapMapper.selectCount(new LambdaQueryWrapper<StopperScrap>()
-                .eq(StopperScrap::getStopperId, id)
-                .eq(StopperScrap::getDeleted, 0));
-        if (scrapCount > 0) {
-            throw new RuntimeException("该挡块存在报废记录，无法删除");
-        }
-
-        long maintenanceCount = stopperMaintenanceMapper.selectCount(new LambdaQueryWrapper<StopperMaintenance>()
-                .eq(StopperMaintenance::getStopperId, id)
-                .eq(StopperMaintenance::getDeleted, 0));
-        if (maintenanceCount > 0) {
-            throw new RuntimeException("该挡块存在维修记录，无法删除");
-        }
-
-        long inventoryDetailCount = stopperInventoryDetailMapper.selectCount(new LambdaQueryWrapper<StopperInventoryDetail>()
-                .eq(StopperInventoryDetail::getStopperId, id)
-                .eq(StopperInventoryDetail::getDeleted, 0));
-        if (inventoryDetailCount > 0) {
-            throw new RuntimeException("该挡块存在盘点明细记录，无法删除");
-        }
-
-        long inventoryFreezeCount = stopperInventoryFreezeMapper.selectCount(new LambdaQueryWrapper<StopperInventoryFreeze>()
-                .eq(StopperInventoryFreeze::getStopperId, id)
-                .eq(StopperInventoryFreeze::getDeleted, 0));
-        if (inventoryFreezeCount > 0) {
-            throw new RuntimeException("该挡块存在盘点冻结记录，无法删除");
-        }
-
-        Stopper stopper = new Stopper();
-        stopper.setId(id);
-        stopper.setDeleted(1);
-        stopper.setUpdateTime(LocalDateTime.now());
-        boolean result = updateById(stopper);
+        boolean result = lambdaUpdate()
+                .set(Stopper::getDeleted, 1)
+                .set(Stopper::getUpdateTime, LocalDateTime.now())
+                .eq(Stopper::getId, id)
+                .eq(Stopper::getDeleted, 0)
+                .update();
         if (result) {
             evictSpecsCache();
         }
