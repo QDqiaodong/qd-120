@@ -1,6 +1,7 @@
 package com.stopper.asset.controller;
 
 import com.stopper.asset.common.Result;
+import com.stopper.asset.entity.Stopper;
 import com.stopper.asset.entity.StopperInventoryReview;
 import com.stopper.asset.service.InventoryReviewService;
 import com.stopper.asset.service.StopperInventoryReviewService;
@@ -74,13 +75,13 @@ public class InventoryReviewController {
     }
 
     @PostMapping("/process-scrap")
-    public Result<String> processScrap(@RequestBody Map<String, Object> params) {
+    public Result<Stopper> processScrap(@RequestBody Map<String, Object> params) {
         Long detailId = Long.valueOf(params.get("detailId").toString());
         String scrapReason = params.get("scrapReason") != null ? params.get("scrapReason").toString() : null;
         String scrapDegree = params.get("scrapDegree") != null ? params.get("scrapDegree").toString() : null;
         String operator = params.get("operator") != null ? params.get("operator").toString() : "系统";
         String remark = params.get("remark") != null ? params.get("remark").toString() : null;
-        boolean result = inventoryReviewService.processScrap(detailId, scrapReason, scrapDegree, operator, remark);
-        return result ? Result.success("报废处理成功") : Result.error("操作失败");
+        Stopper stopper = inventoryReviewService.processScrap(detailId, scrapReason, scrapDegree, operator, remark);
+        return stopper != null ? Result.success(stopper) : Result.error("操作失败");
     }
 }

@@ -33,7 +33,7 @@ public class StopperMaintenanceService extends ServiceImpl<StopperMaintenanceMap
     private static final String OUTCOME_SCRAP = "SCRAP";
 
     @Transactional(rollbackFor = Exception.class)
-    public boolean sendToMaintenance(StopperMaintenance maintenance) {
+    public Stopper sendToMaintenance(StopperMaintenance maintenance) {
         Stopper stopper = stopperService.getOne(new LambdaQueryWrapper<Stopper>()
                 .eq(Stopper::getId, maintenance.getStopperId())
                 .eq(Stopper::getDeleted, 0));
@@ -82,14 +82,19 @@ public class StopperMaintenanceService extends ServiceImpl<StopperMaintenanceMap
 
         boolean saveResult = save(maintenance);
         if (!saveResult) {
-            return false;
+            return null;
         }
 
-        return stopperService.updateStation(maintenance.getStopperId(), MAINTENANCE_STATION);
+        boolean updateResult = stopperService.updateStation(maintenance.getStopperId(), MAINTENANCE_STATION);
+        if (!updateResult) {
+            return null;
+        }
+
+        return stopperService.getById(maintenance.getStopperId());
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public boolean completeMaintenance(Long id, StopperMaintenance completeRequest) {
+    public Stopper completeMaintenance(Long id, StopperMaintenance completeRequest) {
         StopperMaintenance maintenance = getOne(new LambdaQueryWrapper<StopperMaintenance>()
                 .eq(StopperMaintenance::getId, id)
                 .eq(StopperMaintenance::getDeleted, 0));
@@ -107,6 +112,7 @@ public class StopperMaintenanceService extends ServiceImpl<StopperMaintenanceMap
             throw new ValidationException("完成维修校验失败", fieldErrors);
         }
 
+        Stopper resultStopper = null;
         if (OUTCOME_RETURN.equals(outcome)) {
             String returnStation = completeRequest.getReturnStation();
             if (returnStation == null || returnStation.trim().isEmpty()) {
@@ -119,6 +125,7 @@ public class StopperMaintenanceService extends ServiceImpl<StopperMaintenanceMap
             }
             maintenance.setReturnStation(returnStation.trim());
             stopperService.updateStation(maintenance.getStopperId(), returnStation.trim());
+            resultStopper = stopperService.getById(maintenance.getStopperId());
         } else {
             StopperScrap scrap = new StopperScrap();
             scrap.setStopperId(maintenance.getStopperId());
@@ -129,7 +136,11 @@ public class StopperMaintenanceService extends ServiceImpl<StopperMaintenanceMap
             scrap.setScrapDegree("严重");
             scrap.setOperator(completeRequest.getCompleteOperator());
             scrap.setRemark("由维修周转转入报废");
-            stopperScrapService.addScrap(scrap);
+            Stopper scrappedStopper = stopperScrapService.addScrap(scrap);
+            if (scrappedStopper == null) {
+                throw new RuntimeException("报废登记失败");
+            }
+            resultStopper = scrappedStopper;
             maintenance.setReturnStation(null);
         }
 
@@ -138,7 +149,8 @@ public class StopperMaintenanceService extends ServiceImpl<StopperMaintenanceMap
         maintenance.setCompleteTime(LocalDateTime.now());
         maintenance.setCompleteOperator(completeRequest.getCompleteOperator());
         maintenance.setCompleteRemark(completeRequest.getCompleteRemark());
-        return updateById(maintenance);
+        boolean updateResult = updateById(maintenance);
+        return updateResult ? resultStopper : null;
     }
 
     public List<StopperMaintenance> getAllMaintenance() {

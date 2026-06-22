@@ -100,6 +100,17 @@
                 <el-tag type="success" effect="plain" size="small">{{ row.station }}</el-tag>
               </template>
             </el-table-column>
+            <el-table-column label="状态" width="90" align="center">
+              <template #default="{ row }">
+                <el-tag
+                  :type="row.status === 2 ? 'danger' : 'success'"
+                  size="small"
+                  effect="dark"
+                >
+                  {{ row.status === 2 ? '报废' : '正常' }}
+                </el-tag>
+              </template>
+            </el-table-column>
             <el-table-column prop="lastShiftTime" label="最新移位时间" min-width="170">
               <template #default="{ row }">
                 <span v-if="row.lastShiftTime" class="shift-time">
@@ -121,9 +132,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { getStopperGroupByEquipment } from '@/api/stopper'
 import { ElMessage } from 'element-plus'
+import { eventBus, EVENTS } from '@/utils/eventBus'
 
 const loading = ref(false)
 const equipmentGroups = ref({})
@@ -206,8 +218,29 @@ const handleReset = () => {
   filterForm.keyword = ''
 }
 
+const updateStopperInGroup = (updatedStopper) => {
+  if (!updatedStopper || !updatedStopper.id) return
+  const groups = equipmentGroups.value
+  Object.keys(groups).forEach(equipment => {
+    const list = groups[equipment]
+    const idx = list.findIndex(s => s.id === updatedStopper.id)
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...updatedStopper }
+    }
+  })
+}
+
+const eventUnsubscribers = []
+
 onMounted(() => {
   loadData()
+  eventUnsubscribers.push(eventBus.on(EVENTS.STOPPER_SCRAPPED, updateStopperInGroup))
+  eventUnsubscribers.push(eventBus.on(EVENTS.STOPPER_SHIFTED, updateStopperInGroup))
+  eventUnsubscribers.push(eventBus.on(EVENTS.STOPPER_UPDATED, updateStopperInGroup))
+})
+
+onUnmounted(() => {
+  eventUnsubscribers.forEach(unsub => unsub())
 })
 </script>
 

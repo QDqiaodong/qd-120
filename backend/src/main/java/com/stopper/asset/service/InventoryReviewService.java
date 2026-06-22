@@ -274,7 +274,7 @@ public class InventoryReviewService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public boolean processScrap(Long detailId, String scrapReason, String scrapDegree, String operator, String remark) {
+    public Stopper processScrap(Long detailId, String scrapReason, String scrapDegree, String operator, String remark) {
         StopperInventoryDetail detail = detailService.getById(detailId);
         validateDetailForReview(detail);
 
@@ -296,13 +296,16 @@ public class InventoryReviewService {
         scrap.setScrapDegree(scrapDegree);
         scrap.setOperator(operator);
         scrap.setRemark(remark);
-        scrapService.addScrap(scrap);
+        Stopper updatedStopper = scrapService.addScrap(scrap);
+        if (updatedStopper == null) {
+            throw new RuntimeException("报废登记失败");
+        }
 
         StopperInventoryReview review = buildReviewRecord(detail, ACTION_SCRAP, operator, remark);
         reviewService.save(review);
 
         markDetailReviewed(detail, RESULT_SCRAP, operator, remark);
-        return true;
+        return updatedStopper;
     }
 
     private void validateDetailForReview(StopperInventoryDetail detail) {

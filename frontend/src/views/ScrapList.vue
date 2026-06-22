@@ -154,6 +154,7 @@ import { getScrapList, addScrap } from '@/api/scrap'
 import { getStopperList } from '@/api/stopper'
 import { ElMessage } from 'element-plus'
 import WearLevelLegend from '@/components/WearLevelLegend.vue'
+import { eventBus, EVENTS } from '@/utils/eventBus'
 
 const wearLegendRef = ref(null)
 
@@ -240,11 +241,14 @@ const handleSubmit = async () => {
   await formRef.value.validate(async (valid) => {
     if (valid) {
       try {
-        await addScrap(scrapForm)
+        const scrappedStopper = await addScrap(scrapForm)
         ElMessage.success('报废登记成功')
         dialogVisible.value = false
         loadData()
         loadStoppers()
+        if (scrappedStopper && scrappedStopper.id) {
+          eventBus.emit(EVENTS.STOPPER_SCRAPPED, scrappedStopper)
+        }
       } catch (error) {
         ElMessage.error('登记失败')
       }

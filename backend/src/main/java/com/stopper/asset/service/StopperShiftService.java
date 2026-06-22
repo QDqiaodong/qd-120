@@ -24,7 +24,7 @@ public class StopperShiftService extends ServiceImpl<StopperShiftMapper, Stopper
     private static final Integer STATUS_SCRAPPED = 2;
 
     @Transactional(rollbackFor = Exception.class)
-    public boolean addShift(StopperShift shift) {
+    public Stopper addShift(StopperShift shift) {
         Stopper stopper = stopperService.getOne(new LambdaQueryWrapper<Stopper>()
                 .eq(Stopper::getId, shift.getStopperId())
                 .eq(Stopper::getDeleted, 0));
@@ -66,10 +66,15 @@ public class StopperShiftService extends ServiceImpl<StopperShiftMapper, Stopper
 
         boolean shiftResult = save(shift);
         if (!shiftResult) {
-            return false;
+            return null;
         }
 
-        return stopperService.updateStation(shift.getStopperId(), shift.getToStation());
+        boolean updateResult = stopperService.updateStation(shift.getStopperId(), shift.getToStation());
+        if (!updateResult) {
+            return null;
+        }
+
+        return stopperService.getById(shift.getStopperId());
     }
 
     public List<StopperShift> getShiftList(Long stopperId) {

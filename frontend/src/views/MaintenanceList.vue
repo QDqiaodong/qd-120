@@ -208,6 +208,7 @@ import { getMaintenanceList, sendMaintenance, completeMaintenance } from '@/api/
 import { getStopperList } from '@/api/stopper'
 import { getStationNames } from '@/api/station'
 import { ElMessage } from 'element-plus'
+import { eventBus, EVENTS } from '@/utils/eventBus'
 
 const loading = ref(false)
 const tableData = ref([])
@@ -337,11 +338,14 @@ const handleSubmit = async () => {
   await formRef.value.validate(async (valid) => {
     if (valid) {
       try {
-        await sendMaintenance(sendForm)
+        const updatedStopper = await sendMaintenance(sendForm)
         ElMessage.success('送修登记成功')
         dialogVisible.value = false
         loadData()
         loadStoppers()
+        if (updatedStopper && updatedStopper.id) {
+          eventBus.emit(EVENTS.STOPPER_UPDATED, updatedStopper)
+        }
       } catch (error) {
         if (error.fieldErrors) {
           const fields = []
@@ -385,7 +389,7 @@ const handleCompleteSubmit = async () => {
   await completeFormRef.value.validate(async (valid) => {
     if (valid) {
       try {
-        await completeMaintenance(completeForm.id, {
+        const updatedStopper = await completeMaintenance(completeForm.id, {
           outcome: completeForm.outcome,
           returnStation: completeForm.outcome === 'RETURN' ? completeForm.returnStation : '',
           completeOperator: completeForm.completeOperator,
@@ -395,6 +399,13 @@ const handleCompleteSubmit = async () => {
         completeDialogVisible.value = false
         loadData()
         loadStoppers()
+        if (updatedStopper && updatedStopper.id) {
+          if (completeForm.outcome === 'SCRAP') {
+            eventBus.emit(EVENTS.STOPPER_SCRAPPED, updatedStopper)
+          } else {
+            eventBus.emit(EVENTS.STOPPER_UPDATED, updatedStopper)
+          }
+        }
       } catch (error) {
         if (error.fieldErrors) {
           const fields = []

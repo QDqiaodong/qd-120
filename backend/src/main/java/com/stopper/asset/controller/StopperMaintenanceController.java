@@ -1,6 +1,7 @@
 package com.stopper.asset.controller;
 
 import com.stopper.asset.common.Result;
+import com.stopper.asset.entity.Stopper;
 import com.stopper.asset.entity.StopperMaintenance;
 import com.stopper.asset.service.StopperMaintenanceService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,14 +37,14 @@ public class StopperMaintenanceController {
     }
 
     @PostMapping
-    public Result<String> add(@RequestBody StopperMaintenance maintenance) {
-        boolean result = maintenanceService.sendToMaintenance(maintenance);
-        return result ? Result.success("送修登记成功") : Result.error("登记失败");
+    public Result<Stopper> add(@RequestBody StopperMaintenance maintenance) {
+        Stopper stopper = maintenanceService.sendToMaintenance(maintenance);
+        return stopper != null ? Result.success(stopper) : Result.error("登记失败");
     }
 
     @PostMapping("/{id}/complete")
-    public Result<String> complete(@PathVariable Long id, @RequestBody StopperMaintenance completeRequest) {
-        boolean result = maintenanceService.completeMaintenance(id, completeRequest);
-        return result ? Result.success("维修完成处理成功") : Result.error("处理失败");
+    public Result<Stopper> complete(@PathVariable Long id, @RequestBody StopperMaintenance completeRequest) {
+        Stopper stopper = maintenanceService.completeMaintenance(id, completeRequest);
+        return stopper != null ? Result.success(stopper) : Result.error("处理失败");
     }
 }

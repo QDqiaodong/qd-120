@@ -77,11 +77,13 @@
             {{ formatDate(row.storageTime) }}
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="90">
+        <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
-              {{ row.status === 1 ? '正常' : '报废' }}
-            </el-tag>
+            <div class="status-cell">
+              <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small" effect="dark">
+                {{ row.status === 1 ? '正常' : '报废' }}
+              </el-tag>
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="图片" width="80" align="center">
@@ -110,10 +112,16 @@
             <span v-else class="no-image">-</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" link @click="handleView(row)">查看</el-button>
-            <el-button type="primary" size="small" link @click="handleEdit(row)">编辑</el-button>
+            <el-button
+              type="primary"
+              size="small"
+              link
+              :disabled="row.status === 2"
+              @click="handleEdit(row)"
+            >编辑</el-button>
             <el-button
               type="primary"
               size="small"
@@ -121,7 +129,13 @@
               :disabled="row.status === 2"
               @click="handleShift(row)"
             >移位</el-button>
-            <el-button type="danger" size="small" link @click="handleDelete(row)">删除</el-button>
+            <el-button
+              type="danger"
+              size="small"
+              link
+              :disabled="row.status === 2"
+              @click="handleDelete(row)"
+            >删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -270,7 +284,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, nextTick } from 'vue'
+import { ref, reactive, onMounted, nextTick, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   getStopperPage,
@@ -285,6 +299,7 @@ import {
 import { getStationNames, ensureStation } from '@/api/station'
 import { addShift } from '@/api/shift'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { eventBus, EVENTS } from '@/utils/eventBus'
 
 const router = useRouter()
 
@@ -575,6 +590,10 @@ const handleAdd = () => {
 }
 
 const handleEdit = (row) => {
+  if (row.status === 2) {
+    ElMessage.warning('报废挡块不可编辑')
+    return
+  }
   isEdit.value = true
   dialogTitle.value = '编辑挡块'
   clearAllServerFieldErrors()
@@ -733,6 +752,10 @@ const handleSubmit = async () => {
 }
 
 const handleDelete = (row) => {
+  if (row.status === 2) {
+    ElMessage.warning('报废挡块不可删除')
+    return
+  }
   ElMessageBox.confirm(`确定要删除挡块 ${row.stopperNo} 吗?`, '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
@@ -750,6 +773,10 @@ const handleDelete = (row) => {
 }
 
 const handleShift = (row) => {
+  if (row.status === 2) {
+    ElMessage.warning('报废挡块不可移位')
+    return
+  }
   shiftForm.stopperId = row.id
   shiftForm.stopperNo = row.stopperNo
   shiftForm.fromStation = row.station
@@ -782,11 +809,14 @@ const handleShiftSubmit = async () => {
             console.warn('确保工位存在失败，可能已在移位时自动处理')
           }
         }
-        await addShift(shiftForm)
+        const updatedStopper = await addShift(shiftForm)
         ElMessage.success('移位登记成功')
         shiftDialogVisible.value = false
         loadData()
         loadFilterStations()
+        if (updatedStopper && updatedStopper.id) {
+          eventBus.emit(EVENTS.STOPPER_SHIFTED, updatedStopper)
+        }
       } catch (error) {
         if (error.fieldErrors) {
           const fields = []
@@ -813,11 +843,42 @@ const handlePageChange = (val) => {
   loadData()
 }
 
+const handleStopperScrapped = (scrappedStopper) => {
+  if (!scrappedStopper || !scrappedStopper.id) return
+  const idx = tableData.value.findIndex(s => s.id === scrappedStopper.id)
+  if (idx !== -1) {
+    tableData.value[idx] = { ...tableData.value[idx], ...scrappedStopper, status: 2 }
+  }
+}
+
+const handleStopperShifted = (updatedStopper) => {
+  if (!updatedStopper || !updatedStopper.id) return
+  const idx = tableData.value.findIndex(s => s.id === updatedStopper.id)
+  if (idx !== -1) {
+    tableData.value[idx] = { ...tableData.value[idx], ...updatedStopper }
+  }
+}
+
+const eventUnsubscribers = []
+
 onMounted(() => {
   loadData()
   loadSpecs()
   loadFilterStations()
   loadEquipments()
+  eventUnsubscribers.push(eventBus.on(EVENTS.STOPPER_SCRAPPED, handleStopperScrapped))
+  eventUnsubscribers.push(eventBus.on(EVENTS.STOPPER_SHIFTED, handleStopperShifted))
+  eventUnsubscribers.push(eventBus.on(EVENTS.STOPPER_UPDATED, (stopper) => {
+    if (!stopper || !stopper.id) return
+    const idx = tableData.value.findIndex(s => s.id === stopper.id)
+    if (idx !== -1) {
+      tableData.value[idx] = { ...tableData.value[idx], ...stopper }
+    }
+  }))
+})
+
+onUnmounted(() => {
+  eventUnsubscribers.forEach(unsub => unsub())
 })
 </script>
 
@@ -877,5 +938,11 @@ onMounted(() => {
 .no-image {
   color: #c0c4cc;
   font-size: 12px;
+}
+
+.status-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

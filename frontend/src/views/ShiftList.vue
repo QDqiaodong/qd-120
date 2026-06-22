@@ -112,6 +112,7 @@ import { getStopperList, getStopperById, getAllStations as getStopperStations } 
 import { getStationNames, ensureStation } from '@/api/station'
 import { ElMessage } from 'element-plus'
 import { Right } from '@element-plus/icons-vue'
+import { eventBus, EVENTS } from '@/utils/eventBus'
 
 const loading = ref(false)
 const tableData = ref([])
@@ -276,11 +277,14 @@ const handleSubmit = async () => {
             console.warn('确保工位存在失败，可能已在移位时自动处理')
           }
         }
-        await addShift(shiftForm)
+        const updatedStopper = await addShift(shiftForm)
         ElMessage.success('登记成功')
         dialogVisible.value = false
         loadData()
         loadStoppers()
+        if (updatedStopper && updatedStopper.id) {
+          eventBus.emit(EVENTS.STOPPER_SHIFTED, updatedStopper)
+        }
       } catch (error) {
         if (error.fieldErrors) {
           const fields = []

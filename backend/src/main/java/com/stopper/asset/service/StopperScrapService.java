@@ -19,7 +19,7 @@ public class StopperScrapService extends ServiceImpl<StopperScrapMapper, Stopper
     private StopperService stopperService;
 
     @Transactional(rollbackFor = Exception.class)
-    public boolean addScrap(StopperScrap scrap) {
+    public Stopper addScrap(StopperScrap scrap) {
         Stopper stopper = stopperService.getOne(new LambdaQueryWrapper<Stopper>()
                 .eq(Stopper::getId, scrap.getStopperId())
                 .eq(Stopper::getDeleted, 0));
@@ -46,12 +46,13 @@ public class StopperScrapService extends ServiceImpl<StopperScrapMapper, Stopper
 
         boolean scrapResult = save(scrap);
         if (!scrapResult) {
-            return false;
+            return null;
         }
 
         stopper.setStatus(2);
         stopper.setUpdateTime(LocalDateTime.now());
-        return stopperService.updateById(stopper);
+        boolean updateResult = stopperService.updateById(stopper);
+        return updateResult ? stopper : null;
     }
 
     public List<StopperScrap> getAllScraps() {

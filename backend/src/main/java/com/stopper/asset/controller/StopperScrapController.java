@@ -1,6 +1,7 @@
 package com.stopper.asset.controller;
 
 import com.stopper.asset.common.Result;
+import com.stopper.asset.entity.Stopper;
 import com.stopper.asset.entity.StopperScrap;
 import com.stopper.asset.service.StopperScrapService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,9 +27,9 @@ public class StopperScrapController {
     }
 
     @PostMapping
-    public Result<String> add(@RequestBody StopperScrap scrap) {
-        boolean result = scrapService.addScrap(scrap);
-        return result ? Result.success("报废登记成功") : Result.error("登记失败");
+    public Result<Stopper> add(@RequestBody StopperScrap scrap) {
+        Stopper stopper = scrapService.addScrap(scrap);
+        return stopper != null ? Result.success(stopper) : Result.error("登记失败");
     }
 
     @GetMapping("/stopper/{stopperId}")

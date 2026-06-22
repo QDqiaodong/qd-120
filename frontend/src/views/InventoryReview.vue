@@ -352,6 +352,7 @@ import {
 } from '@/api/inventoryReview'
 import { getStationNames } from '@/api/station'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { eventBus, EVENTS } from '@/utils/eventBus'
 
 const router = useRouter()
 
@@ -630,7 +631,7 @@ const submitProcessScrap = async () => {
           '报废确认',
           { type: 'error', confirmButtonText: '确认报废' }
         )
-        await processScrap({
+        const scrappedStopper = await processScrap({
           detailId: scrapForm.detailId,
           scrapReason: scrapForm.scrapReason,
           scrapDegree: scrapForm.scrapDegree,
@@ -640,6 +641,9 @@ const submitProcessScrap = async () => {
         ElMessage.success('报废处理成功')
         scrapVisible.value = false
         await loadAllData()
+        if (scrappedStopper && scrappedStopper.id) {
+          eventBus.emit(EVENTS.STOPPER_SCRAPPED, scrappedStopper)
+        }
       } catch (e) {
         if (e !== 'cancel') {
           ElMessage.error(e?.message || '操作失败')
