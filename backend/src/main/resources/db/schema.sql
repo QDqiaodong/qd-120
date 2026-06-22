@@ -96,13 +96,45 @@ CREATE TABLE IF NOT EXISTS stopper_inventory_detail (
     inventory_status TINYINT DEFAULT 0 COMMENT '盘点状态：0-未盘，1-已盘，2-差异',
     diff_reason_code VARCHAR(50) DEFAULT NULL COMMENT '标准差异原因码：MISSING-缺失，MISPLACED-错位，WORN-编号磨损，PICTURE_MISMATCH-图片不符',
     diff_reason VARCHAR(500) DEFAULT NULL COMMENT '差异补充说明',
+    review_status TINYINT DEFAULT 0 COMMENT '复核状态：0-待复核，1-已复核，2-无需复核（非缺失/错位差异）',
+    review_result VARCHAR(50) DEFAULT NULL COMMENT '复核结果：CORRECT_STATION-修正工位，FOUND-标记找回，SCRAP-报废',
+    review_operator VARCHAR(100) DEFAULT NULL COMMENT '复核人',
+    review_time DATETIME DEFAULT NULL COMMENT '复核时间',
+    review_remark VARCHAR(500) DEFAULT NULL COMMENT '复核备注',
+    corrected_station VARCHAR(100) DEFAULT NULL COMMENT '修正后工位',
     create_time DATETIME DEFAULT NULL COMMENT '创建时间',
     deleted TINYINT DEFAULT 0 COMMENT '逻辑删除',
     PRIMARY KEY (id),
     KEY idx_inventory_id (inventory_id),
     KEY idx_stopper_id (stopper_id),
-    KEY idx_station (station)
+    KEY idx_station (station),
+    KEY idx_review_status (review_status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='挡块盘点明细表';
+
+CREATE TABLE IF NOT EXISTS stopper_inventory_review (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    inventory_id BIGINT NOT NULL COMMENT '盘点单ID',
+    detail_id BIGINT NOT NULL COMMENT '盘点明细ID',
+    stopper_id BIGINT NOT NULL COMMENT '挡块ID',
+    stopper_no VARCHAR(50) DEFAULT NULL COMMENT '挡块编号',
+    spec VARCHAR(100) DEFAULT NULL COMMENT '规格型号',
+    original_station VARCHAR(100) DEFAULT NULL COMMENT '原工位（冻结工位）',
+    current_station VARCHAR(100) DEFAULT NULL COMMENT '盘点时工位',
+    corrected_station VARCHAR(100) DEFAULT NULL COMMENT '修正后工位',
+    diff_reason_code VARCHAR(50) DEFAULT NULL COMMENT '差异原因码',
+    review_action VARCHAR(50) NOT NULL COMMENT '复核动作：SECOND_CONFIRM-二次确认，CORRECT_STATION-修正工位，FOUND-标记找回，SCRAP-报废',
+    review_operator VARCHAR(100) DEFAULT NULL COMMENT '操作人',
+    review_time DATETIME DEFAULT NULL COMMENT '操作时间',
+    review_remark VARCHAR(500) DEFAULT NULL COMMENT '操作备注',
+    create_time DATETIME DEFAULT NULL COMMENT '创建时间',
+    deleted TINYINT DEFAULT 0 COMMENT '逻辑删除',
+    PRIMARY KEY (id),
+    KEY idx_inventory_id (inventory_id),
+    KEY idx_detail_id (detail_id),
+    KEY idx_stopper_id (stopper_id),
+    KEY idx_review_action (review_action),
+    KEY idx_review_time (review_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='盘点差异复核操作记录表';
 
 CREATE TABLE IF NOT EXISTS stopper_inventory_freeze (
     id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',

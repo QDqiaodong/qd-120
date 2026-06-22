@@ -8,12 +8,14 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("stopper_inventory_detail")
-public class StopperInventoryDetail {
+@TableName("stopper_inventory_review")
+public class StopperInventoryReview {
     @TableId(type = IdType.AUTO)
     private Long id;
 
     private Long inventoryId;
+
+    private Long detailId;
 
     private Long stopperId;
 
@@ -21,25 +23,21 @@ public class StopperInventoryDetail {
 
     private String spec;
 
-    private String station;
+    private String originalStation;
 
-    private Integer inventoryStatus;
+    private String currentStation;
+
+    private String correctedStation;
 
     private String diffReasonCode;
 
-    private String diffReason;
-
-    private Integer reviewStatus;
-
-    private String reviewResult;
+    private String reviewAction;
 
     private String reviewOperator;
 
     private LocalDateTime reviewTime;
 
     private String reviewRemark;
-
-    private String correctedStation;
 
     private LocalDateTime createTime;
 

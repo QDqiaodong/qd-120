@@ -103,6 +103,7 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
             detail.setSpec(stopper.getSpec());
             detail.setStation(stopper.getStation());
             detail.setInventoryStatus(0);
+            detail.setReviewStatus(0);
             detail.setCreateTime(LocalDateTime.now());
             detail.setDeleted(0);
             detailService.save(detail);
@@ -156,6 +157,17 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
         detail.setInventoryStatus(status);
         detail.setDiffReasonCode(diffReasonCode);
         detail.setDiffReason(diffReason);
+
+        if (status != null && status == 2) {
+            if ("MISSING".equals(diffReasonCode) || "MISPLACED".equals(diffReasonCode)) {
+                detail.setReviewStatus(0);
+            } else {
+                detail.setReviewStatus(2);
+            }
+        } else if (status != null && status == 1) {
+            detail.setReviewStatus(2);
+        }
+
         detailService.updateById(detail);
 
         updateInventorySummary(detail.getInventoryId());

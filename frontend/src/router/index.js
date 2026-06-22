@@ -54,6 +54,12 @@ const routes = [
     meta: { title: '盘点明细' }
   },
   {
+    path: '/inventory-review',
+    name: 'InventoryReview',
+    component: () => import('@/views/InventoryReview.vue'),
+    meta: { title: '差异复核' }
+  },
+  {
     path: '/scrap',
     name: 'Scrap',
     component: () => import('@/views/ScrapList.vue'),

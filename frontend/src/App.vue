@@ -44,6 +44,10 @@
             <el-icon><Tickets /></el-icon>
             <span>月度清点</span>
           </el-menu-item>
+          <el-menu-item index="/inventory-review">
+            <el-icon><CircleCheck /></el-icon>
+            <span>差异复核</span>
+          </el-menu-item>
           <el-menu-item index="/scrap">
             <el-icon><Delete /></el-icon>
             <span>报废归档</span>
