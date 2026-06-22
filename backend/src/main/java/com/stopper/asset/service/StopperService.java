@@ -67,7 +67,11 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
                 .eq(Stopper::getStatus, 1)
                 .eq(Stopper::getDeleted, 0)
                 .orderByAsc(Stopper::getStation, Stopper::getStopperNo));
-        return all.stream().collect(Collectors.groupingBy(Stopper::getStation));
+        return all.stream().collect(Collectors.groupingBy(
+                s -> s.getStation() != null && !s.getStation().isBlank() ? s.getStation() : "未分配工位",
+                LinkedHashMap::new,
+                Collectors.toList()
+        ));
     }
 
     public Map<String, List<StopperEquipmentVO>> getStoppersGroupByEquipment() {
@@ -106,7 +110,7 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
 
         return voList.stream()
                 .collect(Collectors.groupingBy(
-                        vo -> vo.getAdaptEquipment() != null ? vo.getAdaptEquipment() : "未适配设备",
+                        vo -> vo.getAdaptEquipment() != null && !vo.getAdaptEquipment().isBlank() ? vo.getAdaptEquipment() : "未适配设备",
                         LinkedHashMap::new,
                         Collectors.toList()
                 ));

@@ -129,6 +129,10 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
             throw new RuntimeException("非法的盘点状态值，合法值为 0(未盘)、1(已盘)、2(差异)");
         }
 
+        if (status != null && status == 2 && (diffReason == null || diffReason.trim().isEmpty())) {
+            throw new RuntimeException("标记为差异时，差异原因不能为空");
+        }
+
         StopperInventoryDetail detail = detailService.getById(detailId);
         if (detail == null) {
             throw new RuntimeException("盘点明细不存在");
@@ -195,6 +199,14 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
                 .count();
         if (pendingCount > 0) {
             throw new RuntimeException("还有 " + pendingCount + " 项挡块未盘点，请全部处理后再完成盘点");
+        }
+        long missingReasonCount = details.stream()
+                .filter(detail -> detail.getInventoryStatus() != null
+                        && detail.getInventoryStatus() == 2
+                        && (detail.getDiffReason() == null || detail.getDiffReason().trim().isEmpty()))
+                .count();
+        if (missingReasonCount > 0) {
+            throw new RuntimeException("还有 " + missingReasonCount + " 项差异未填写差异原因，请补充后再完成盘点");
         }
         updateInventorySummary(inventoryId);
         inventory = getById(inventoryId);
