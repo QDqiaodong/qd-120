@@ -40,7 +40,8 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
     private StopperStationService stopperStationService;
 
     private static final String SPECS_CACHE_KEY = "stopper:specs";
-    private static final long SPECS_CACHE_EXPIRE = 24;
+    private static final String EQUIPMENTS_CACHE_KEY = "stopper:equipments";
+    private static final long CACHE_EXPIRE_HOURS = 24;
 
     public List<String> getAllSpecs() {
         List<String> specs = (List<String>) redisTemplate.opsForValue().get(SPECS_CACHE_KEY);
@@ -49,7 +50,7 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
         }
         specs = baseMapper.selectAllSpecs();
         if (specs != null && !specs.isEmpty()) {
-            redisTemplate.opsForValue().set(SPECS_CACHE_KEY, specs, SPECS_CACHE_EXPIRE, TimeUnit.HOURS);
+            redisTemplate.opsForValue().set(SPECS_CACHE_KEY, specs, CACHE_EXPIRE_HOURS, TimeUnit.HOURS);
         }
         return specs;
     }
@@ -58,12 +59,24 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
         redisTemplate.delete(SPECS_CACHE_KEY);
     }
 
-    public List<String> getAllStations() {
-        return stopperStationMapper.selectAllStationNames();
+    public List<String> getAllEquipments() {
+        List<String> equipments = (List<String>) redisTemplate.opsForValue().get(EQUIPMENTS_CACHE_KEY);
+        if (equipments != null && !equipments.isEmpty()) {
+            return equipments;
+        }
+        equipments = baseMapper.selectAllEquipments();
+        if (equipments != null && !equipments.isEmpty()) {
+            redisTemplate.opsForValue().set(EQUIPMENTS_CACHE_KEY, equipments, CACHE_EXPIRE_HOURS, TimeUnit.HOURS);
+        }
+        return equipments;
     }
 
-    public List<String> getAllEquipments() {
-        return baseMapper.selectAllEquipments();
+    public void evictEquipmentsCache() {
+        redisTemplate.delete(EQUIPMENTS_CACHE_KEY);
+    }
+
+    public List<String> getAllStations() {
+        return stopperStationMapper.selectAllStationNames();
     }
 
     public Map<String, List<Stopper>> getStoppersGroupByStation() {
@@ -227,6 +240,7 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
         boolean result = save(stopper);
         if (result) {
             evictSpecsCache();
+            evictEquipmentsCache();
         }
         return result;
     }
@@ -266,6 +280,7 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
         boolean result = updateById(stopper);
         if (result) {
             evictSpecsCache();
+            evictEquipmentsCache();
         }
         return result;
     }
@@ -313,6 +328,7 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
                 .update();
         if (result) {
             evictSpecsCache();
+            evictEquipmentsCache();
         }
         return result;
     }

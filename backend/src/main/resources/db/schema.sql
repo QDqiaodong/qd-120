@@ -176,3 +176,22 @@ INSERT IGNORE INTO stopper (stopper_no, spec, adapt_equipment, station, storage_
 ('STP-008', 'U型-35x50', '大型压装机C-02', 'C区-工位01', '2024-03-10 08:35:00', '', 1, '', '2024-03-10 08:35:00', '2024-03-10 08:35:00', 0),
 ('STP-009', 'D型-25x30', '全自动组装机A-03', 'A区-工位03', '2024-03-15 16:00:00', '', 1, '', '2024-03-15 16:00:00', '2024-03-15 16:00:00', 0),
 ('STP-010', 'D型-30x40', '全自动组装机A-04', 'A区-工位03', '2024-04-01 09:00:00', '', 1, '', '2024-04-01 09:00:00', '2024-04-01 09:00:00', 0);
+
+CREATE TABLE IF NOT EXISTS stopper_image_metadata (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    image_url VARCHAR(500) NOT NULL COMMENT '图片地址',
+    source VARCHAR(50) DEFAULT NULL COMMENT '来源：INVENTORY-盘点，MAINTENANCE-维修，UPLOAD-手动上传',
+    width INT DEFAULT NULL COMMENT '图片宽度',
+    height INT DEFAULT NULL COMMENT '图片高度',
+    stopper_no VARCHAR(50) DEFAULT NULL COMMENT '绑定挡块编号',
+    upload_time DATETIME DEFAULT NULL COMMENT '上传时间',
+    upload_operator VARCHAR(100) DEFAULT NULL COMMENT '上传人',
+    remark VARCHAR(500) DEFAULT NULL COMMENT '备注',
+    create_time DATETIME DEFAULT NULL COMMENT '创建时间',
+    update_time DATETIME DEFAULT NULL COMMENT '更新时间',
+    deleted TINYINT DEFAULT 0 COMMENT '逻辑删除：0-未删除，1-已删除',
+    PRIMARY KEY (id),
+    KEY idx_stopper_no (stopper_no),
+    KEY idx_upload_time (upload_time),
+    KEY idx_source (source)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='图片元数据表';
