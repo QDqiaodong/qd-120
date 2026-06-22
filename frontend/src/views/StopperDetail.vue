@@ -142,13 +142,53 @@
         </el-table-column>
       </el-table>
     </el-card>
+
+    <el-card class="equipment-history-card" v-if="equipmentHistory.length > 0">
+      <template #header>
+        <div class="card-header">
+          <span class="card-title">适配设备更换历史</span>
+          <el-tag type="primary" size="small">{{ equipmentHistory.length }} 条记录</el-tag>
+        </div>
+      </template>
+      <el-table :data="equipmentHistory" border stripe>
+        <el-table-column label="变更前设备" min-width="160" show-overflow-tooltip>
+          <template #default="{ row }">
+            <el-tag v-if="row.oldEquipment" type="info" size="small" effect="plain">
+              {{ row.oldEquipment }}
+            </el-tag>
+            <span v-else class="no-equipment">未设置</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="变更后设备" min-width="160" show-overflow-tooltip>
+          <template #default="{ row }">
+            <el-tag v-if="row.newEquipment" type="success" size="small" effect="plain">
+              {{ row.newEquipment }}
+            </el-tag>
+            <span v-else class="no-equipment">未设置</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="changeReason" label="更换原因" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="operator" label="操作人" width="90" />
+        <el-table-column prop="changeTime" label="更换时间" width="170">
+          <template #default="{ row }">
+            {{ formatDate(row.changeTime) }}
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <el-card class="no-equipment-card" v-else-if="!loading && stopperInfo?.status === 1">
+      <el-empty description="该挡块暂无适配设备更换记录" :image-size="80">
+        <el-icon class="empty-icon"><CircleCheck /></el-icon>
+      </el-empty>
+    </el-card>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getStopperById } from '@/api/stopper'
+import { getStopperById, getEquipmentHistory } from '@/api/stopper'
 import { getScrapByStopperId } from '@/api/scrap'
 import { getMaintenanceByStopper } from '@/api/maintenance'
 import { ElMessage } from 'element-plus'
@@ -162,6 +202,7 @@ const loading = ref(false)
 const stopperInfo = ref(null)
 const scrapHistory = ref([])
 const maintenanceHistory = ref([])
+const equipmentHistory = ref([])
 const wearLegendRef = ref(null)
 
 const latestScrap = computed(() => {
@@ -183,14 +224,16 @@ const loadData = async () => {
 
   loading.value = true
   try {
-    const [stopper, scraps, maintenances] = await Promise.all([
+    const [stopper, scraps, maintenances, equipmentChanges] = await Promise.all([
       getStopperById(id),
       getScrapByStopperId(id),
-      getMaintenanceByStopper(id)
+      getMaintenanceByStopper(id),
+      getEquipmentHistory(id)
     ])
     stopperInfo.value = stopper
     scrapHistory.value = scraps || []
     maintenanceHistory.value = maintenances || []
+    equipmentHistory.value = equipmentChanges || []
   } catch (error) {
     ElMessage.error('加载数据失败')
   } finally {
@@ -218,7 +261,9 @@ onMounted(() => {
 .info-card,
 .scrap-history-card,
 .no-scrap-card,
-.maintenance-history-card {
+.maintenance-history-card,
+.equipment-history-card,
+.no-equipment-card {
   border-radius: 8px;
 }
 
@@ -339,6 +384,15 @@ onMounted(() => {
 
 .no-scrap-card :deep(.el-empty__description) {
   color: #67c23a;
+}
+
+.no-equipment {
+  color: #c0c4cc;
+  font-size: 13px;
+}
+
+.no-equipment-card :deep(.el-empty__description) {
+  color: #909399;
 }
 
 @media (max-width: 768px) {

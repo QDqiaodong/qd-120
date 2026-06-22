@@ -102,3 +102,10 @@ export function getNameplates(ids) {
     data: ids
   })
 }
+
+export function getEquipmentHistory(id) {
+  return request({
+    url: `/stopper/${id}/equipment-history`,
+    method: 'get'
+  })
+}

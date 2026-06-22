@@ -178,7 +178,27 @@
           </el-select>
         </el-form-item>
         <el-form-item label="适配设备" prop="adaptEquipment">
-          <el-input v-model="stopperForm.adaptEquipment" placeholder="请输入适配设备" />
+          <el-input
+            v-model="stopperForm.adaptEquipment"
+            placeholder="请输入适配设备"
+            @input="checkEquipmentChange"
+          />
+        </el-form-item>
+        <el-form-item
+          v-if="isEdit && equipmentChanged"
+          label="更换原因"
+          prop="changeReason"
+        >
+          <el-input
+            v-model="stopperForm.changeReason"
+            type="textarea"
+            :rows="2"
+            placeholder="适配设备变更时必须填写更换原因"
+            @input="clearServerFieldError('changeReason')"
+          />
+        </el-form-item>
+        <el-form-item label="操作人" v-if="isEdit && equipmentChanged">
+          <el-input v-model="stopperForm.operator" placeholder="请输入操作人" />
         </el-form-item>
         <el-form-item label="存放工位" prop="station">
           <el-select
@@ -305,13 +325,19 @@ const stopperForm = reactive({
   adaptEquipment: '',
   station: '',
   imageUrl: '',
-  remark: ''
+  remark: '',
+  changeReason: '',
+  operator: ''
 })
+
+const originalAdaptEquipment = ref('')
+const equipmentChanged = ref(false)
 
 const serverFieldErrors = reactive({
   stopperNo: '',
   spec: '',
-  station: ''
+  station: '',
+  changeReason: ''
 })
 
 const createFieldValidator = (field, requiredMessage) => {
@@ -328,10 +354,38 @@ const createFieldValidator = (field, requiredMessage) => {
   }
 }
 
+const validateChangeReason = (rule, value, callback) => {
+  if (equipmentChanged.value) {
+    const oldEq = (originalAdaptEquipment.value || '').trim()
+    const newEq = (stopperForm.adaptEquipment || '').trim()
+    if ((oldEq !== '' || newEq !== '') && (!value || String(value).trim() === '')) {
+      callback(new Error('适配设备变更时必须填写更换原因'))
+      return
+    }
+  }
+  if (serverFieldErrors.changeReason) {
+    callback(new Error(serverFieldErrors.changeReason))
+    return
+  }
+  callback()
+}
+
 const formRules = {
   stopperNo: [{ validator: createFieldValidator('stopperNo', '请输入挡块编号'), trigger: 'blur' }],
   spec: [{ validator: createFieldValidator('spec', '请输入规格型号'), trigger: 'blur' }],
-  station: [{ validator: createFieldValidator('station', '请输入存放工位'), trigger: 'blur' }]
+  station: [{ validator: createFieldValidator('station', '请输入存放工位'), trigger: 'blur' }],
+  changeReason: [{ validator: validateChangeReason, trigger: 'blur' }]
+}
+
+const checkEquipmentChange = () => {
+  const oldEq = (originalAdaptEquipment.value || '').trim()
+  const newEq = (stopperForm.adaptEquipment || '').trim()
+  equipmentChanged.value = oldEq !== newEq
+  if (!equipmentChanged.value) {
+    stopperForm.changeReason = ''
+    stopperForm.operator = ''
+    clearServerFieldError('changeReason')
+  }
 }
 
 const shiftDialogVisible = ref(false)
@@ -524,6 +578,8 @@ const handleEdit = (row) => {
   isEdit.value = true
   dialogTitle.value = '编辑挡块'
   clearAllServerFieldErrors()
+  originalAdaptEquipment.value = row.adaptEquipment || ''
+  equipmentChanged.value = false
   Object.assign(stopperForm, {
     id: row.id,
     stopperNo: row.stopperNo,
@@ -531,7 +587,9 @@ const handleEdit = (row) => {
     adaptEquipment: row.adaptEquipment,
     station: row.station,
     imageUrl: row.imageUrl || '',
-    remark: row.remark || ''
+    remark: row.remark || '',
+    changeReason: '',
+    operator: ''
   })
   loadFormStations()
   dialogVisible.value = true
@@ -550,6 +608,10 @@ const resetForm = () => {
   stopperForm.station = ''
   stopperForm.imageUrl = ''
   stopperForm.remark = ''
+  stopperForm.changeReason = ''
+  stopperForm.operator = ''
+  originalAdaptEquipment.value = ''
+  equipmentChanged.value = false
   autoGenerate.value = true
   formRef.value?.resetFields()
 }
@@ -609,7 +671,21 @@ const handleSubmit = async () => {
           }
         }
         if (isEdit.value) {
-          await updateStopper(stopperForm)
+          const submitData = {
+            ...stopperForm
+          }
+          if (equipmentChanged.value) {
+            const oldEq = (originalAdaptEquipment.value || '').trim()
+            const newEq = (stopperForm.adaptEquipment || '').trim()
+            if (oldEq === '' && newEq === '') {
+              delete submitData.changeReason
+              delete submitData.operator
+            }
+          } else {
+            delete submitData.changeReason
+            delete submitData.operator
+          }
+          await updateStopper(submitData)
           ElMessage.success('更新成功')
         } else {
           const submitData = {
@@ -642,6 +718,9 @@ const handleSubmit = async () => {
             }
             fieldNames.push(field)
           })
+          if (equipmentChanged.value && !fieldNames.includes('changeReason') && serverFieldErrors.changeReason) {
+            fieldNames.push('changeReason')
+          }
           await nextTick()
           formRef.value?.validateField?.(fieldNames).catch(() => {})
           ElMessage.error(firstMessage)

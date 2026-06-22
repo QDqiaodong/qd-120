@@ -3,8 +3,10 @@ package com.stopper.asset.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.stopper.asset.entity.Stopper;
+import com.stopper.asset.entity.StopperEquipmentChange;
 import com.stopper.asset.entity.StopperShift;
 import com.stopper.asset.entity.StopperStation;
+import com.stopper.asset.mapper.StopperEquipmentChangeMapper;
 import com.stopper.asset.mapper.StopperMapper;
 import com.stopper.asset.mapper.StopperShiftMapper;
 import com.stopper.asset.mapper.StopperStationMapper;
@@ -38,6 +40,9 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
 
     @Autowired
     private StopperStationService stopperStationService;
+
+    @Autowired
+    private StopperEquipmentChangeService stopperEquipmentChangeService;
 
     private static final String SPECS_CACHE_KEY = "stopper:specs";
     private static final String EQUIPMENTS_CACHE_KEY = "stopper:equipments";
@@ -251,7 +256,7 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public boolean updateStopper(Stopper stopper) {
+    public boolean updateStopper(Stopper stopper, String changeReason, String operator) {
         if (stopper.getStopperNo() == null || stopper.getStopperNo().trim().isEmpty()) {
             throw new RuntimeException("挡块编号不能为空");
         }
@@ -275,14 +280,50 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
         if (existsByStopperNo(stopper.getStopperNo(), stopper.getId())) {
             return false;
         }
+
+        Stopper oldStopper = getById(stopper.getId());
+        boolean hasEquipmentChange = false;
+        String oldEquipment = null;
+        String newEquipment = null;
+        if (oldStopper != null) {
+            oldEquipment = oldStopper.getAdaptEquipment();
+            newEquipment = stopper.getAdaptEquipment();
+            hasEquipmentChange = stopperEquipmentChangeService.hasEquipmentChange(
+                    stopper.getId(), oldEquipment, newEquipment);
+
+            if (hasEquipmentChange) {
+                String oldEq = oldEquipment == null ? "" : oldEquipment.trim();
+                String newEq = newEquipment == null ? "" : newEquipment.trim();
+                if (!oldEq.isEmpty() || !newEq.isEmpty()) {
+                    if (changeReason == null || changeReason.trim().isEmpty()) {
+                        throw new RuntimeException("适配设备变更时必须填写更换原因");
+                    }
+                }
+            }
+        }
+
         stopper.setUpdateTime(LocalDateTime.now());
         ensureStationRecorded(stopper.getStation());
         boolean result = updateById(stopper);
         if (result) {
             evictSpecsCache();
             evictEquipmentsCache();
+
+            if (hasEquipmentChange && oldStopper != null) {
+                String oldEq = oldEquipment == null ? "" : oldEquipment.trim();
+                String newEq = newEquipment == null ? "" : newEquipment.trim();
+                if (!oldEq.isEmpty() || !newEq.isEmpty()) {
+                    stopperEquipmentChangeService.recordEquipmentChange(
+                            stopper, oldEquipment, newEquipment, changeReason, operator);
+                }
+            }
         }
         return result;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public boolean updateStopper(Stopper stopper) {
+        return updateStopper(stopper, null, null);
     }
 
     private void ensureStationRecorded(String stationName) {

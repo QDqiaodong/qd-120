@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.stopper.asset.common.Result;
 import com.stopper.asset.entity.Stopper;
+import com.stopper.asset.entity.StopperEquipmentChange;
+import com.stopper.asset.service.StopperEquipmentChangeService;
 import com.stopper.asset.service.StopperService;
 import com.stopper.asset.vo.StopperEquipmentVO;
 import com.stopper.asset.vo.StopperNameplateVO;
@@ -20,6 +22,9 @@ public class StopperController {
 
     @Autowired
     private StopperService stopperService;
+
+    @Autowired
+    private StopperEquipmentChangeService stopperEquipmentChangeService;
 
     @GetMapping("/list")
     public Result<List<Stopper>> list() {
@@ -151,7 +156,20 @@ public class StopperController {
     }
 
     @PutMapping
-    public Result<Object> update(@RequestBody Stopper stopper) {
+    public Result<Object> update(@RequestBody Map<String, Object> params) {
+        Stopper stopper = new Stopper();
+        if (params.get("id") != null) {
+            stopper.setId(Long.valueOf(params.get("id").toString()));
+        }
+        stopper.setStopperNo(params.get("stopperNo") != null ? params.get("stopperNo").toString() : null);
+        stopper.setSpec(params.get("spec") != null ? params.get("spec").toString() : null);
+        stopper.setAdaptEquipment(params.get("adaptEquipment") != null ? params.get("adaptEquipment").toString() : null);
+        stopper.setStation(params.get("station") != null ? params.get("station").toString() : null);
+        stopper.setImageUrl(params.get("imageUrl") != null ? params.get("imageUrl").toString() : null);
+        stopper.setRemark(params.get("remark") != null ? params.get("remark").toString() : null);
+        String changeReason = params.get("changeReason") != null ? params.get("changeReason").toString() : null;
+        String operator = params.get("operator") != null ? params.get("operator").toString() : null;
+
         if (stopper.getStopperNo() == null || stopper.getStopperNo().trim().isEmpty()) {
             return Result.validationError("stopperNo", "挡块编号不能为空");
         }
@@ -169,8 +187,21 @@ public class StopperController {
             existingInfo.put("status", existing.getStatus());
             return Result.validationError("stopperNo", "挡块编号已存在", existingInfo);
         }
-        boolean result = stopperService.updateStopper(stopper);
+        boolean result;
+        try {
+            result = stopperService.updateStopper(stopper, changeReason, operator);
+        } catch (RuntimeException e) {
+            if (e.getMessage() != null && e.getMessage().contains("更换原因")) {
+                return Result.validationError("changeReason", e.getMessage());
+            }
+            return Result.error(e.getMessage());
+        }
         return result ? Result.success("更新成功") : Result.error("更新失败");
+    }
+
+    @GetMapping("/{id}/equipment-history")
+    public Result<List<StopperEquipmentChange>> getEquipmentHistory(@PathVariable Long id) {
+        return Result.success(stopperEquipmentChangeService.getByStopperId(id));
     }
 
     @DeleteMapping("/{id}")

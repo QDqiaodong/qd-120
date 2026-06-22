@@ -209,6 +209,24 @@ INSERT IGNORE INTO stopper (stopper_no, spec, adapt_equipment, station, storage_
 ('STP-009', 'D型-25x30', '全自动组装机A-03', 'A区-工位03', '2024-03-15 16:00:00', '', 1, '', '2024-03-15 16:00:00', '2024-03-15 16:00:00', 0),
 ('STP-010', 'D型-30x40', '全自动组装机A-04', 'A区-工位03', '2024-04-01 09:00:00', '', 1, '', '2024-04-01 09:00:00', '2024-04-01 09:00:00', 0);
 
+CREATE TABLE IF NOT EXISTS stopper_equipment_change (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    stopper_id BIGINT NOT NULL COMMENT '挡块ID',
+    stopper_no VARCHAR(50) DEFAULT NULL COMMENT '挡块编号',
+    spec VARCHAR(100) DEFAULT NULL COMMENT '规格型号（快照）',
+    old_equipment VARCHAR(200) DEFAULT NULL COMMENT '变更前适配设备',
+    new_equipment VARCHAR(200) DEFAULT NULL COMMENT '变更后适配设备',
+    change_reason VARCHAR(500) DEFAULT NULL COMMENT '更换原因',
+    operator VARCHAR(100) DEFAULT NULL COMMENT '操作人',
+    change_time DATETIME DEFAULT NULL COMMENT '更换时间',
+    remark VARCHAR(500) DEFAULT NULL COMMENT '备注',
+    create_time DATETIME DEFAULT NULL COMMENT '创建时间',
+    deleted TINYINT DEFAULT 0 COMMENT '逻辑删除',
+    PRIMARY KEY (id),
+    KEY idx_stopper_id (stopper_id),
+    KEY idx_change_time (change_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='挡块适配设备更换记录表';
+
 CREATE TABLE IF NOT EXISTS stopper_image_metadata (
     id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     image_url VARCHAR(500) NOT NULL COMMENT '图片地址',
