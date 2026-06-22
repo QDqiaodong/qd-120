@@ -25,6 +25,8 @@ public class StopperInventoryDetail {
 
     private Integer inventoryStatus;
 
+    private String diffReasonCode;
+
     private String diffReason;
 
     private LocalDateTime createTime;

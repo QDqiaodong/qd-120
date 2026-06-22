@@ -120,9 +120,13 @@
             <el-tag v-else type="info" size="small">未盘</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="diffReason" label="差异原因" min-width="180" show-overflow-tooltip>
+        <el-table-column label="差异原因" min-width="200" show-overflow-tooltip>
           <template #default="{ row }">
-            {{ row.diffReason || '-' }}
+            <span v-if="row.diffReasonCode">
+              {{ getDiffReasonLabel(row.diffReasonCode) }}
+              <span v-if="row.diffReason" class="diff-reason-sub">（{{ row.diffReason }}）</span>
+            </span>
+            <span v-else>-</span>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="180" v-if="inventoryInfo?.inventoryStatus !== 'COMPLETED'">
@@ -143,8 +147,18 @@
         <el-form-item label="挡块编号">
           <el-input :value="diffForm.stopperNo" disabled />
         </el-form-item>
-        <el-form-item label="差异原因">
-          <el-input v-model="diffForm.diffReason" type="textarea" :rows="3" placeholder="请输入差异原因" />
+        <el-form-item label="标准原因">
+          <el-select v-model="diffForm.diffReasonCode" placeholder="请选择标准原因" style="width: 100%">
+            <el-option
+              v-for="item in diffReasonOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="补充说明">
+          <el-input v-model="diffForm.diffReason" type="textarea" :rows="3" placeholder="请输入补充说明（可选）" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -224,8 +238,21 @@ const diffDialogVisible = ref(false)
 const diffForm = reactive({
   detailId: null,
   stopperNo: '',
+  diffReasonCode: '',
   diffReason: ''
 })
+
+const diffReasonOptions = [
+  { value: 'MISSING', label: '缺失' },
+  { value: 'MISPLACED', label: '错位' },
+  { value: 'WORN', label: '编号磨损' },
+  { value: 'PICTURE_MISMATCH', label: '图片不符' }
+]
+
+const getDiffReasonLabel = (code) => {
+  const option = diffReasonOptions.find(item => item.value === code)
+  return option ? option.label : code
+}
 
 const loadData = async () => {
   const id = route.params.id
@@ -260,6 +287,7 @@ const markNormal = async (row) => {
     await markInventoryItem({
       detailId: row.id,
       status: 1,
+      diffReasonCode: '',
       diffReason: ''
     })
     ElMessage.success('标记成功')
@@ -272,6 +300,7 @@ const markNormal = async (row) => {
 const openDiffDialog = (row) => {
   diffForm.detailId = row.id
   diffForm.stopperNo = row.stopperNo
+  diffForm.diffReasonCode = row.diffReasonCode || ''
   diffForm.diffReason = row.diffReason || ''
   diffDialogVisible.value = true
 }
@@ -279,14 +308,20 @@ const openDiffDialog = (row) => {
 const resetDiffForm = () => {
   diffForm.detailId = null
   diffForm.stopperNo = ''
+  diffForm.diffReasonCode = ''
   diffForm.diffReason = ''
 }
 
 const submitDiff = async () => {
+  if (!diffForm.diffReasonCode) {
+    ElMessage.warning('请选择标准原因')
+    return
+  }
   try {
     await markInventoryItem({
       detailId: diffForm.detailId,
       status: 2,
+      diffReasonCode: diffForm.diffReasonCode,
       diffReason: diffForm.diffReason
     })
     ElMessage.success('标记成功')
@@ -436,6 +471,11 @@ onMounted(() => {
   background: #f5f7fa;
   padding: 2px 6px;
   border-radius: 3px;
+  font-size: 12px;
+}
+
+.diff-reason-sub {
+  color: #909399;
   font-size: 12px;
 }
 </style>

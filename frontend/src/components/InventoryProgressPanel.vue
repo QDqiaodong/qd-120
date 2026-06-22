@@ -110,7 +110,15 @@
               <el-tag type="danger" size="small">差异</el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="diffReason" label="差异原因" min-width="150" show-overflow-tooltip />
+          <el-table-column label="差异原因" min-width="180" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span v-if="row.diffReasonCode">
+                {{ getDiffReasonLabel(row.diffReasonCode) }}
+                <span v-if="row.diffReason" class="diff-reason-sub">（{{ row.diffReason }}）</span>
+              </span>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
         </el-table>
         <el-empty v-if="!progressData?.discrepancyList?.length" description="暂无差异数据" :image-size="80" />
       </el-tab-pane>
@@ -167,6 +175,18 @@ const loading = ref(false)
 const progressData = ref(null)
 const activeTab = ref('counted')
 let refreshTimer = null
+
+const diffReasonOptions = [
+  { value: 'MISSING', label: '缺失' },
+  { value: 'MISPLACED', label: '错位' },
+  { value: 'WORN', label: '编号磨损' },
+  { value: 'PICTURE_MISMATCH', label: '图片不符' }
+]
+
+const getDiffReasonLabel = (code) => {
+  const option = diffReasonOptions.find(item => item.value === code)
+  return option ? option.label : code
+}
 
 const circumference = 2 * Math.PI * 42
 
@@ -430,6 +450,11 @@ defineExpose({
 
 .empty-state {
   margin-top: 20px;
+}
+
+.diff-reason-sub {
+  color: #909399;
+  font-size: 12px;
 }
 
 @media (max-width: 1200px) {

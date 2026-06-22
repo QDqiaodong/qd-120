@@ -124,13 +124,13 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public boolean markInventoryItem(Long detailId, Integer status, String diffReason) {
+    public boolean markInventoryItem(Long detailId, Integer status, String diffReasonCode, String diffReason) {
         if (status == null || (status != 0 && status != 1 && status != 2)) {
             throw new RuntimeException("非法的盘点状态值，合法值为 0(未盘)、1(已盘)、2(差异)");
         }
 
-        if (status != null && status == 2 && (diffReason == null || diffReason.trim().isEmpty())) {
-            throw new RuntimeException("标记为差异时，差异原因不能为空");
+        if (status != null && status == 2 && (diffReasonCode == null || diffReasonCode.trim().isEmpty())) {
+            throw new RuntimeException("标记为差异时，标准原因不能为空");
         }
 
         StopperInventoryDetail detail = detailService.getById(detailId);
@@ -154,6 +154,7 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
         }
 
         detail.setInventoryStatus(status);
+        detail.setDiffReasonCode(diffReasonCode);
         detail.setDiffReason(diffReason);
         detailService.updateById(detail);
 
@@ -203,10 +204,10 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
         long missingReasonCount = details.stream()
                 .filter(detail -> detail.getInventoryStatus() != null
                         && detail.getInventoryStatus() == 2
-                        && (detail.getDiffReason() == null || detail.getDiffReason().trim().isEmpty()))
+                        && (detail.getDiffReasonCode() == null || detail.getDiffReasonCode().trim().isEmpty()))
                 .count();
         if (missingReasonCount > 0) {
-            throw new RuntimeException("还有 " + missingReasonCount + " 项差异未填写差异原因，请补充后再完成盘点");
+            throw new RuntimeException("还有 " + missingReasonCount + " 项差异未选择标准原因，请补充后再完成盘点");
         }
         updateInventorySummary(inventoryId);
         inventory = getById(inventoryId);

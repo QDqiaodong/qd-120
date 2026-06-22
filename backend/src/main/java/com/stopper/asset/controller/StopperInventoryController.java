@@ -51,8 +51,9 @@ public class StopperInventoryController {
     public Result<String> markItem(@RequestBody Map<String, Object> params) {
         Long detailId = Long.valueOf(params.get("detailId").toString());
         Integer status = Integer.valueOf(params.get("status").toString());
+        String diffReasonCode = params.get("diffReasonCode") != null ? params.get("diffReasonCode").toString() : null;
         String diffReason = params.get("diffReason") != null ? params.get("diffReason").toString() : null;
-        boolean result = inventoryService.markInventoryItem(detailId, status, diffReason);
+        boolean result = inventoryService.markInventoryItem(detailId, status, diffReasonCode, diffReason);
         return result ? Result.success("标记成功") : Result.error("标记失败");
     }
 
