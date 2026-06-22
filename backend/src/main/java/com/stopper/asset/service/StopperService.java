@@ -35,6 +35,9 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
     @Autowired
     private StopperStationMapper stopperStationMapper;
 
+    @Autowired
+    private StopperStationService stopperStationService;
+
     private static final String SPECS_CACHE_KEY = "stopper:specs";
     private static final long SPECS_CACHE_EXPIRE = 24;
 
@@ -287,6 +290,7 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
         newStation.setUpdateTime(LocalDateTime.now());
         newStation.setDeleted(0);
         stopperStationMapper.insert(newStation);
+        stopperStationService.evictStationsCache();
     }
 
     private String extractZone(String stationName) {
@@ -319,6 +323,10 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
         stopper.setId(id);
         stopper.setStation(station);
         stopper.setUpdateTime(LocalDateTime.now());
-        return updateById(stopper);
+        boolean result = updateById(stopper);
+        if (result) {
+            stopperStationService.evictStationsCache();
+        }
+        return result;
     }
 }
