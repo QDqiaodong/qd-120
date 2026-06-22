@@ -7,6 +7,7 @@ import com.stopper.asset.entity.StopperInventory;
 import com.stopper.asset.entity.StopperInventoryDetail;
 import com.stopper.asset.entity.StopperInventoryFreeze;
 import com.stopper.asset.mapper.StopperInventoryMapper;
+import com.stopper.asset.vo.InventoryCompletionCheckVO;
 import com.stopper.asset.vo.InventoryProgressVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
@@ -195,7 +196,7 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public boolean completeInventory(Long inventoryId, String remark) {
+    public InventoryCompletionCheckVO completeInventory(Long inventoryId, String remark) {
         StopperInventory inventory = getById(inventoryId);
         if (inventory == null) {
             throw new RuntimeException("盘点记录不存在");
@@ -204,29 +205,55 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
             throw new RuntimeException("该盘点单已完成，无法重复完成");
         }
         List<StopperInventoryDetail> details = detailService.getByInventoryId(inventoryId);
-        long pendingCount = details.stream()
-                .filter(detail -> {
-                    Integer status = detail.getInventoryStatus();
-                    return status == null || status == 0 || (status != 1 && status != 2);
-                })
-                .count();
-        if (pendingCount > 0) {
-            throw new RuntimeException("还有 " + pendingCount + " 项挡块未盘点，请全部处理后再完成盘点");
+
+        InventoryCompletionCheckVO checkResult = validateCompletionReady(details);
+
+        if (!checkResult.getIsAllProcessed()) {
+            return checkResult;
         }
-        long missingReasonCount = details.stream()
-                .filter(detail -> detail.getInventoryStatus() != null
-                        && detail.getInventoryStatus() == 2
-                        && (detail.getDiffReasonCode() == null || detail.getDiffReasonCode().trim().isEmpty()))
-                .count();
-        if (missingReasonCount > 0) {
-            throw new RuntimeException("还有 " + missingReasonCount + " 项差异未选择标准原因，请补充后再完成盘点");
-        }
+
         updateInventorySummary(inventoryId);
         inventory = getById(inventoryId);
         inventory.setInventoryStatus("COMPLETED");
         inventory.setRemark(remark);
         inventory.setInventoryTime(LocalDateTime.now());
-        return updateById(inventory);
+        updateById(inventory);
+
+        checkResult.setIsAllProcessed(true);
+        return checkResult;
+    }
+
+    private InventoryCompletionCheckVO validateCompletionReady(List<StopperInventoryDetail> details) {
+        InventoryCompletionCheckVO result = new InventoryCompletionCheckVO();
+        List<StopperInventoryDetail> unprocessedList = details.stream()
+                .filter(detail -> {
+                    Integer status = detail.getInventoryStatus();
+                    Integer reviewStatus = detail.getReviewStatus();
+                    String diffReasonCode = detail.getDiffReasonCode();
+
+                    boolean isUncounted = status == null || status == 0 || (status != 1 && status != 2);
+
+                    boolean isDiscrepancy = status != null && status == 2;
+                    boolean needsReview = isDiscrepancy
+                            && ("MISSING".equals(diffReasonCode) || "MISPLACED".equals(diffReasonCode));
+                    boolean isUnreviewed = reviewStatus == null || reviewStatus != 1;
+
+                    return isUncounted || (isDiscrepancy && needsReview && isUnreviewed);
+                })
+                .collect(Collectors.toList());
+
+        result.setIsAllProcessed(unprocessedList.isEmpty());
+        result.setUnprocessedCount(unprocessedList.size());
+
+        if (!unprocessedList.isEmpty()) {
+            List<String> stopperNos = unprocessedList.stream()
+                    .map(StopperInventoryDetail::getStopperNo)
+                    .limit(5)
+                    .collect(Collectors.toList());
+            result.setUnprocessedStopperNos(stopperNos);
+        }
+
+        return result;
     }
 
     public List<StopperInventory> getAllInventories() {
@@ -281,7 +308,17 @@ public class StopperInventoryService extends ServiceImpl<StopperInventoryMapper,
         List<StopperInventoryDetail> unprocessedList = details.stream()
                 .filter(d -> {
                     Integer status = d.getInventoryStatus();
-                    return status == null || status == 0 || (status != 1 && status != 2);
+                    Integer reviewStatus = d.getReviewStatus();
+                    String diffReasonCode = d.getDiffReasonCode();
+
+                    boolean isUncounted = status == null || status == 0 || (status != 1 && status != 2);
+
+                    boolean isDiscrepancy = status != null && status == 2;
+                    boolean needsReview = isDiscrepancy
+                            && ("MISSING".equals(diffReasonCode) || "MISPLACED".equals(diffReasonCode));
+                    boolean isUnreviewed = reviewStatus == null || reviewStatus != 1;
+
+                    return isUncounted || (isDiscrepancy && needsReview && isUnreviewed);
                 })
                 .collect(Collectors.toList());
         

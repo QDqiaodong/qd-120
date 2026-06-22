@@ -130,8 +130,19 @@
           <el-table-column prop="spec" label="规格型号" width="120" />
           <el-table-column prop="station" label="存放工位" width="130" />
           <el-table-column label="状态" width="80">
-            <template #default>
-              <el-tag type="info" size="small">未盘</el-tag>
+            <template #default="{ row }">
+              <el-tag v-if="row.inventoryStatus === 0 || row.inventoryStatus == null" type="info" size="small">未盘</el-tag>
+              <el-tag v-else-if="row.inventoryStatus === 2" type="warning" size="small">待复核</el-tag>
+              <el-tag v-else type="info" size="small">未处理</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="差异原因" min-width="180" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span v-if="row.diffReasonCode">
+                {{ getDiffReasonLabel(row.diffReasonCode) }}
+                <span v-if="row.diffReason" class="diff-reason-sub">（{{ row.diffReason }}）</span>
+              </span>
+              <span v-else>-</span>
             </template>
           </el-table-column>
         </el-table>

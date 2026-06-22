@@ -5,6 +5,7 @@ import com.stopper.asset.entity.StopperInventory;
 import com.stopper.asset.entity.StopperInventoryDetail;
 import com.stopper.asset.entity.StopperInventoryFreeze;
 import com.stopper.asset.service.StopperInventoryService;
+import com.stopper.asset.vo.InventoryCompletionCheckVO;
 import com.stopper.asset.vo.InventoryProgressVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -58,11 +59,14 @@ public class StopperInventoryController {
     }
 
     @PostMapping("/complete")
-    public Result<String> complete(@RequestBody Map<String, Object> params) {
+    public Result<InventoryCompletionCheckVO> complete(@RequestBody Map<String, Object> params) {
         Long inventoryId = Long.valueOf(params.get("inventoryId").toString());
         String remark = params.get("remark") != null ? params.get("remark").toString() : null;
-        boolean result = inventoryService.completeInventory(inventoryId, remark);
-        return result ? Result.success("盘点完成") : Result.error("操作失败");
+        InventoryCompletionCheckVO result = inventoryService.completeInventory(inventoryId, remark);
+        if (!result.getIsAllProcessed()) {
+            return Result.validationError("complete", "存在未处理项", result);
+        }
+        return Result.success(result);
     }
 
     @GetMapping("/progress")

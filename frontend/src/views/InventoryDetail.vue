@@ -196,7 +196,16 @@ const pendingCount = computed(() => {
 const unprocessedCount = computed(() => {
   return detailList.value.filter((item) => {
     const status = item.inventoryStatus
-    return status !== 1
+    const reviewStatus = item.reviewStatus
+    const diffReasonCode = item.diffReasonCode
+
+    const isUncounted = status === undefined || status === null || status === 0 || (status !== 1 && status !== 2)
+
+    const isDiscrepancy = status === 2
+    const needsReview = isDiscrepancy && (diffReasonCode === 'MISSING' || diffReasonCode === 'MISPLACED')
+    const isUnreviewed = reviewStatus === undefined || reviewStatus === null || reviewStatus !== 1
+
+    return isUncounted || (isDiscrepancy && needsReview && isUnreviewed)
   }).length
 })
 
@@ -206,7 +215,17 @@ const filteredList = computed(() => {
     return sourceList
   }
   return sourceList.filter((item) => {
-    return item.inventoryStatus !== 1
+    const status = item.inventoryStatus
+    const reviewStatus = item.reviewStatus
+    const diffReasonCode = item.diffReasonCode
+
+    const isUncounted = status === undefined || status === null || status === 0 || (status !== 1 && status !== 2)
+
+    const isDiscrepancy = status === 2
+    const needsReview = isDiscrepancy && (diffReasonCode === 'MISSING' || diffReasonCode === 'MISPLACED')
+    const isUnreviewed = reviewStatus === undefined || reviewStatus === null || reviewStatus !== 1
+
+    return isUncounted || (isDiscrepancy && needsReview && isUnreviewed)
   })
 })
 
@@ -333,18 +352,6 @@ const submitDiff = async () => {
 }
 
 const handleComplete = async () => {
-  if (pendingCount.value > 0) {
-    ElMessageBox.confirm(
-      `还有 ${pendingCount.value} 项挡块未盘点，请先全部处理后再完成盘点。`,
-      '存在未盘明细',
-      {
-        confirmButtonText: '我知道了',
-        showCancelButton: false,
-        type: 'warning'
-      }
-    )
-    return
-  }
   try {
     const { value } = await ElMessageBox.prompt('请输入盘点备注', '完成盘点', {
       confirmButtonText: '确认完成',
@@ -360,7 +367,23 @@ const handleComplete = async () => {
     await loadData()
     await nextTick()
   } catch (error) {
-    if (error !== 'cancel') {
+    if (error === 'cancel') {
+      return
+    }
+    if (error && error.data && error.data.unprocessedCount !== undefined) {
+      const { unprocessedCount, unprocessedStopperNos } = error.data
+      let message = `存在 ${unprocessedCount} 项未处理，请先处理后再完成盘点。`
+      if (unprocessedStopperNos && unprocessedStopperNos.length > 0) {
+        const showCount = unprocessedStopperNos.length > 5 ? 5 : unprocessedStopperNos.length
+        const moreText = unprocessedCount > 5 ? ` 等 ${unprocessedCount} 项` : ''
+        message += `\n未处理挡块：${unprocessedStopperNos.slice(0, 5).join('、')}${moreText}`
+      }
+      ElMessageBox.alert(message, '存在未处理项', {
+        confirmButtonText: '我知道了',
+        type: 'warning',
+        dangerouslyUseHTMLString: false
+      })
+    } else {
       ElMessage.error(error?.message || '操作失败')
     }
   }
