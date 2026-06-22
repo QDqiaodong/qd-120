@@ -6,6 +6,7 @@ import com.stopper.asset.common.Result;
 import com.stopper.asset.entity.Stopper;
 import com.stopper.asset.service.StopperService;
 import com.stopper.asset.vo.StopperEquipmentVO;
+import com.stopper.asset.vo.StopperNameplateVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -180,5 +181,10 @@ public class StopperController {
         } catch (RuntimeException e) {
             return Result.error(e.getMessage());
         }
+    }
+
+    @PostMapping("/nameplates")
+    public Result<List<StopperNameplateVO>> getNameplates(@RequestBody List<Long> ids) {
+        return Result.success(stopperService.getNameplatesByIds(ids));
     }
 }

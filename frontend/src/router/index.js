@@ -58,6 +58,12 @@ const routes = [
     name: 'Scrap',
     component: () => import('@/views/ScrapList.vue'),
     meta: { title: '报废归档' }
+  },
+  {
+    path: '/nameplate-export',
+    name: 'NameplateExport',
+    component: () => import('@/views/NameplateExport.vue'),
+    meta: { title: '铭牌导出' }
   }
 ]
 

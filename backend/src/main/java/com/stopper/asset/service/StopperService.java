@@ -9,6 +9,7 @@ import com.stopper.asset.mapper.StopperMapper;
 import com.stopper.asset.mapper.StopperShiftMapper;
 import com.stopper.asset.mapper.StopperStationMapper;
 import com.stopper.asset.vo.StopperEquipmentVO;
+import com.stopper.asset.vo.StopperNameplateVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -328,5 +329,27 @@ public class StopperService extends ServiceImpl<StopperMapper, Stopper> {
             stopperStationService.evictStationsCache();
         }
         return result;
+    }
+
+    public List<StopperNameplateVO> getNameplatesByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<Stopper> stoppers = list(new LambdaQueryWrapper<Stopper>()
+                .in(Stopper::getId, ids)
+                .eq(Stopper::getDeleted, 0)
+                .eq(Stopper::getStatus, 1)
+                .orderByAsc(Stopper::getStopperNo));
+        List<StopperNameplateVO> voList = new ArrayList<>();
+        for (Stopper stopper : stoppers) {
+            StopperNameplateVO vo = new StopperNameplateVO();
+            vo.setId(stopper.getId());
+            vo.setStopperNo(stopper.getStopperNo());
+            vo.setSpec(stopper.getSpec());
+            vo.setAdaptEquipment(stopper.getAdaptEquipment());
+            vo.setStation(stopper.getStation());
+            voList.add(vo);
+        }
+        return voList;
     }
 }

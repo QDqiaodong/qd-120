@@ -48,6 +48,10 @@
             <el-icon><Delete /></el-icon>
             <span>报废归档</span>
           </el-menu-item>
+          <el-menu-item index="/nameplate-export">
+            <el-icon><Printer /></el-icon>
+            <span>铭牌导出</span>
+          </el-menu-item>
         </el-menu>
       </el-aside>
       

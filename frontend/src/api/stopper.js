@@ -94,3 +94,11 @@ export function deleteStopper(id) {
     method: 'delete'
   })
 }
+
+export function getNameplates(ids) {
+  return request({
+    url: '/stopper/nameplates',
+    method: 'post',
+    data: ids
+  })
+}
